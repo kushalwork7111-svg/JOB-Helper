@@ -1,0 +1,11 @@
+.clasp.json
+node_modules/
+.env
+.env.*
+artifacts/
+*.log
+.clasprc.json
+.job-helper-auth.json
+.job-helper-created.json
+.job-helper-deployed
+private-project/

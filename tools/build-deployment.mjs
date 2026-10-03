@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {zip} from './archive.mjs';
+const order=['Core.gs','Store.gs','Candidates.gs','Imports.gs','Refinements.gs','PrivateDrive.gs','Documents.gs','DocumentFormat.gs','Integrations.gs','Jobs.gs','Applications.gs','Automation.gs','Code.gs'];
+const code=order.map(f=>`// ===== ${f} =====\n${fs.readFileSync(f,'utf8')}`).join('\n\n');
+new vm.Script(code,{filename:'deployment/Code.gs'});
+const html=fs.readFileSync('Index.html','utf8').replace("<?!= include_('Styles'); ?>",()=>fs.readFileSync('Styles.html','utf8')).replace("<?!= include_('Client'); ?>",()=>fs.readFileSync('Client.html','utf8'));
+const instructions='JOB HELPER — PRIVATE GOOGLE APPS SCRIPT DEPLOYMENT\n\n1. Create a NEW standalone project at script.google.com; do not use DVCS.\n2. Replace Code.gs with this Code.gs and create HTML file Index with this Index.html.\n3. Enable viewing appsscript.json in Project Settings and use the included manifest.\n4. Enable Drive API v3 under Services.\n5. Run setupJobHelper once and authorize YOUR account.\n6. Deploy as a Web app, Execute as Me, access Only myself.\n7. Save your CV, extract/edit candidate facts, and approve only verified facts.\n8. Import an official job posting, review its local match, prepare a packet, and export/review it.\n9. AI is optional and off by default; no paid requirement. See the repository README for detailed permissions and controls.\n\nThis archive contains no credentials, personal CVs, sample job data, or published deployment.\n';
+const parts=[{path:'Code.gs',content:code},{path:'Index.html',content:html},{path:'appsscript.json',content:fs.readFileSync('appsscript.json','utf8')},{path:'START-HERE.txt',content:instructions}];
+fs.mkdirSync('artifacts/deployment',{recursive:true});for(const p of parts)fs.writeFileSync('artifacts/deployment/'+p.path,p.content);
+fs.writeFileSync('artifacts/Job-Helper-Apps-Script.zip',zip(parts));
+console.log('Built artifacts/Job-Helper-Apps-Script.zip: Code.gs, Index.html, private manifest, and START-HERE.txt. No preview fixtures included.');
+
+const installerParts=[...parts,
+ {path:'install-google.mjs',content:fs.readFileSync('tools/install-google.mjs','utf8')},
+ {path:'Install-Windows.cmd',content:'@echo off\r\ncd /d "%~dp0"\r\nnode install-google.mjs\r\npause\r\n'},
+ {path:'INSTALL.txt',content:'JOB HELPER AUTOMATED INSTALLER\n\nExtract this entire ZIP into a NEW folder on your own computer. Install the free Node.js LTS from https://nodejs.org if needed. Windows: double-click Install-Windows.cmd. Mac/Linux: open Terminal in this folder and run node install-google.mjs.\n\nSign in with the Google account that will own this app. If requested, enable Apps Script API at https://script.google.com/home/usersettings and rerun. The installer creates a NEW project, uploads code and deploys with Only myself access. It does not select or update DVCS. It uses Google clasp 3.4.1 from npm; its developer authorization is separate from the app permissions.\n\nWhen the editor opens, select setupJobHelper and click Run. Review/approve Google permissions. Drive v3 is already configured by the manifest; no manual service addition is needed. Find your private web-app URL in Deploy > Manage deployments.\n\nNo AI key or billing setup is required. Google AI Pro is separate from Gemini API access. AI stays off. Each external message requires approval.\n\nDo not share the extracted folder after login: it will contain local Google credentials. Never paste tokens into chat. Rerunning resumes only the project created by this installer; it does not redeploy an already completed pilot. For subsequent code releases use a reviewed version through Manage deployments.\n\nGoogle login/deployment/Drive conversion are not yet live-tested. If an authorization screen blocks the installer, retain the original manual bundle as a fallback.\n'}];
+fs.writeFileSync('artifacts/Job-Helper-Automated-Installer.zip',zip(installerParts));
+fs.mkdirSync('artifacts/installer',{recursive:true});
+for(const p of installerParts)fs.writeFileSync('artifacts/installer/'+p.path,p.content);
+console.log('Built optional automated installer. Google OAuth and deployment remain untested live.');
