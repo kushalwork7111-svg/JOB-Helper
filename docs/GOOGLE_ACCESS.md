@@ -11,6 +11,6 @@ The simplest supported route is a **local Codex task on your computer**, using G
 
 If you did not use the installer, the local agent needs the **Script ID** shown in Job Helper's Apps Script Project Settings to select the right project. A Script ID is an identifier, not a password. Do not confuse it with the `/exec` deployment ID or a DVCS project ID.
 
-The current release remains Only myself / executes as owner. The agreed shared site has not been implemented yet: one Google host/sender, separate application logins, users see only their own records, and the logged-in user approves their own message. Owner authorization does not supply user isolation. Do not make this build public to enable multiple users.
+The default release remains Only myself / executes as owner. Version 1.1.0 implements the shared site locally: one Google host/sender, separate application logins, users see only their own records, and the logged-in user approves their own messages. The optional shared manifest is a pilot, not a live-validated public deployment. Follow docs/SHARED_SITE.md and test two accounts before opening access. No new Google scopes are added.
 
 Google login/deployment and real Drive OCR still need account-side testing. The private CV was tested locally; no employer messages or AI calls were sent for parser QA.

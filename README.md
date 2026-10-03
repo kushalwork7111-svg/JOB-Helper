@@ -1,6 +1,6 @@
 # Job Helper
 
-A private Google Apps Script website for CV analysis, evidence-based job matching, an application pipeline, daily briefings, approved outreach, reminders, and interview preparation.
+A Google Apps Script website with a private default and an optional invitation-based shared pilot for CV analysis, evidence-based job matching, an application pipeline, daily briefings, approved outreach, reminders, and interview preparation.
 
 The app runs on your Google account. Google Sheets holds its records and a private Drive folder holds uploaded CV files. It needs no web server, Firebase project, additional subscription, or billing setup. Local matching and drafting work without AI. Optional AI free allowances can change; no paid fallback is configured.
 
@@ -35,7 +35,7 @@ AI drafts and learning resources need your review. Suggested material URLs are v
 3. Create an HTML file named **Index** and copy the bundled Index.html. The bundle already includes its styles and browser code. Alternatively, use all root `.gs` files plus Index/Styles/Client from the modular source; do not mix the two layouts.
 4. In Project Settings, enable showing `appsscript.json`; replace its contents with this repository's manifest. Add **Drive API v3** under Services if it is not already present. If using a standard Cloud project, enable the Drive and Gmail APIs in that project too.
 5. Run **setupJobHelper** in the editor and authorize your account. It creates a private spreadsheet and CV folder and preserves existing setup on reruns. Keep these files private.
-6. Choose **Deploy → New deployment → Web app**. Set **Execute as: Me** and **Who has access: Only myself**. Open the deployed URL while signed into that account. The backend rejects another or unidentified active user; do not make this app public.
+6. Choose **Deploy → New deployment → Web app**. Set **Execute as: Me** and **Who has access: Only myself**. Open the deployed URL while signed into that account. The default private installation rejects another or unidentified user. For the optional invitation-based shared pilot, follow docs/SHARED_SITE.md.
 7. Add/save your CV and contact details. Extract draft excerpts, edit categories and evidence, and approve only verified facts. Complete employment entries preserve chronology in CV exports.
 8. Save your search criteria. Start with **Opportunities → Import a job**: paste an official employer posting and confirm it is open. Local matching requires no AI connection. Automated employer boards and optional AI can be enabled later.
 9. Review the evidence and preparation, prepare a packet, answer questions, and export/review a CV and letter. Use the employer form and record its confirmation. The first pilot sends email only to your own account.
@@ -118,7 +118,7 @@ The loopback preview on port 4173 uses explicitly fictional data. It cannot anal
 
 Browser checks use a system Chromium (or `CHROMIUM_PATH`), or a Playwright browser installed with `npx playwright install chromium`. `npm run test:documents` also requires Python 3, LibreOffice, `pdftotext`, `pdfinfo`, and `pdftoppm`; it creates real DOCX fixtures, renders PDFs locally, and checks exact source text and pagination.
 
-Tests cover the local-first workflow, matching, privacy, owner checks, approval, duplicate protection, follow-ups, reminders, and owner-only digests using mocked Google services. They do not establish live OAuth, Google PDF/OCR conversion, Gmail delivery, or deployed employer API access. See [VALIDATION.md](VALIDATION.md), [the owner guide](docs/OWNER_GUIDE.md), and [the current handover](docs/HANDOVER.md).
+Tests cover the local-first workflow, matching, privacy, owner checks, approval, duplicate protection, follow-ups, reminders, owner digests and per-user shared digests using mocked Google services. They do not establish live OAuth, Google PDF/OCR conversion, Gmail delivery, or deployed employer API access. See [VALIDATION.md](VALIDATION.md), [the owner guide](docs/OWNER_GUIDE.md), and [the current handover](docs/HANDOVER.md).
 
 ## Optional installer with less copying
 
@@ -128,4 +128,8 @@ Clasp development authorization is separate from the app scopes and may cover ma
 
 ## CV extraction correction and deployment access
 
-Version 1.0.1 groups exact excerpts by section and employment entry, retains short skills, and flags ambiguous summaries/shuffled tables. After deploying, re-extract to archive untouched old drafts while keeping approvals and edits. See docs/OWNER_GUIDE.md. For account access without manually copying code, see [docs/GOOGLE_ACCESS.md](docs/GOOGLE_ACCESS.md). The agreed central-account shared-user model is pending; this release remains private to its owner.
+Version 1.0.1 groups exact excerpts by section and employment entry, retains short skills, and flags ambiguous summaries/shuffled tables. After deploying, re-extract to archive untouched old drafts while keeping approvals and edits. See docs/OWNER_GUIDE.md. For account access without manually copying code, see [docs/GOOGLE_ACCESS.md](docs/GOOGLE_ACCESS.md). Version 1.1.0 implements the central-account shared-user model locally. Default installation remains private; the optional shared pilot requires live Google testing before enabling users.
+
+## One Google account, separate site users (1.1.0)
+
+The optional shared pilot provides invited-email sign-in, per-user records and authenticated downloads while the hosting Google account stores files and sends all emails. Each user approves their own messages. Applications/outreach/follow-ups carry the candidate identity; replies stay in the host account and only strictly matched metadata is returned to the relevant user. Google quotas are shared. AI and shared employer sending start disabled. See [docs/SHARED_SITE.md](docs/SHARED_SITE.md).

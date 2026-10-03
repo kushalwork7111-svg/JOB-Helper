@@ -1,6 +1,6 @@
 /* Pure matching and validation logic; also exercised by the Node test suite. */
 var JH = {
-  VERSION: '1.0.1',
+  VERSION: '1.1.0',
   MAX_JOBS_PER_SCAN: 35,
   MAX_SOURCES: 12,
   OPEN_TTL_MS: 24 * 60 * 60 * 1000,

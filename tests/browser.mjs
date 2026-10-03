@@ -67,6 +67,28 @@ try{
   await page.locator('[data-action="send-application"]').click();await page.waitForFunction(()=>!state.busy);check('Send is blocked when approval checkbox is unchecked',h.mails.length===0&&(await page.locator('#toast').textContent()).includes('approval'));
   await page.locator('#status-form [name="proof"]').fill('Fictional QA confirmation: form submission recorded by user.');await page.locator('#status-form [name="approved"]').check();await page.locator('#status-form button[type="submit"]').click();await page.waitForFunction(()=>!state.busy);check('Confirmed external submission is recorded without sending mail',h.c.find_('applications',application.id).status==='submitted_external'&&h.mails.length===0);
   await page.locator('[data-action="close"]').click();await navigate('overview');await page.screenshot({path:'artifacts/dashboard-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:1000});await page.screenshot({path:'artifacts/dashboard-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1366,height:1000});
+  await page.locator('[data-action="accounts"]').click();await page.waitForFunction(()=>!state.busy);
+  check('Host can open account management',(await page.locator('#dialog-content').innerText()).includes('Site access'));
+  await page.locator('#invite-user-form [name="email"]').fill('alice@example.com');await page.locator('#invite-user-form button[type="submit"]').click();await page.waitForFunction(()=>!state.busy);
+  check('Host can grant invitation-only access',h.c.users_().some(u=>u.email==='alice@example.com'&&u.enabled));
+  await page.locator('#shared-config-form [name="enabled"]').check();await page.locator('#shared-config-form button[type="submit"]').click();await page.waitForFunction(()=>!state.busy);
+  check('Shared mode remains email/AI-disabled until the host enables each',h.c.sharedEnabled_()&&!h.c.sharedConfig_().externalEmail&&!h.c.sharedConfig_().ai);
+  const alice=h.c.users_().find(u=>u.email==='alice@example.com');
+  h.c.withActor_({id:alice.id,email:alice.email,admin:false},()=>h.c.put_('profile',{id:'cv',name:'Alice QA',email:alice.email,cvText:'A fictional private candidate CV for browser QA.',skills:[],experience:[],questions:[]}));
+  h.c.Session.getActiveUser=()=>({getEmail:()=>''});await page.reload();await page.locator('#login-email-form').waitFor();
+  check('Anonymous visitor sees login and no host records',!(await page.locator('#main').innerText()).includes('Sample Edited Name')&&!await page.locator('[data-action="accounts"]').count());
+  await page.locator('#login-email-form [name="email"]').fill('alice@example.com');await page.locator('#login-email-form button[type="submit"]').click();await page.waitForFunction(()=>!state.busy);
+  const code=/Your code is (\d{6})/.exec(h.mails.filter(m=>m.to==='alice@example.com').at(-1).body)[1];
+  await page.locator('#login-code-form [name="code"]').fill(code);await page.locator('#login-code-form button[type="submit"]').click();await page.waitForFunction(()=>!state.busy);
+  check('Invited user signs in and sees only her own profile',await page.evaluate(()=>state.data.profile.name==='Alice QA'&&state.data.applications.length===0&&state.data.jobs.length===0));
+  check('Host controls are absent for ordinary users',await page.locator('[data-action="accounts"]').count()===0);
+  await navigate('settings');check('Shared credentials cannot be edited by a user',await page.locator('[name="geminiKey"]').isDisabled());
+  for(const width of [320,390,768]){await page.setViewportSize({width,height:1000});check(`Shared settings fit at ${width}px`,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
+  await navigate('profile');await page.locator('#profile-form [name="cvText"]').fill('Unsaved private browser draft');await navigate('overview');
+  await page.locator('[data-action="logout"]').click();await page.waitForFunction(()=>!state.busy);await page.locator('#login-email-form').waitFor();
+  check('Logout clears session, profile and unsaved drafts',await page.evaluate(()=>!state.sessionToken&&!state.data&&Object.keys(state.drafts).length===0&&!sessionStorage.getItem('job-helper-session')));
+  check('Logout leaves no candidate data in dialogs',!(await page.locator('#dialog-content').textContent()).includes('Alice QA'));
   check('No browser JavaScript errors',errors.length===0);
   fs.writeFileSync('artifacts/browser-report.json',JSON.stringify({passed:results.length,checks:results,errors,scope:'Real Chromium and client code; Google services mocked; fictional data only.'},null,2));
   console.log(`${results.length} browser checks passed. No real email, AI processing, or application submission occurred.`);

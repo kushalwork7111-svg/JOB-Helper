@@ -13,3 +13,7 @@ Added optional local automated installation via pinned Google clasp 3.4.1: new s
 ## 1.0.1 — 3 October 2026 — CV extraction fix, not deployed
 
 Groups exact excerpts by CV section, employment role and wrapped entries. Contact headers no longer become experience, mixed summaries stay review-only, short skills/languages are retained, and column-ordered education is flagged instead of falsely reconstructed. Displays source/context/warnings. Re-extraction archives untouched legacy auto drafts and preserves approvals/edited facts. Adds 14 parser acceptance tests and three browser checks. Tested the uploaded PDF in two extraction orders and source/contact preservation on 14 public MIT sample pages. Shared hosting/user isolation remains pending.
+
+## 1.1.0 — 3 October 2026 — shared-user implementation, not deployed
+
+Invitation-based sign-in, isolated records/properties/files, authenticated exports, Access management/revocation, per-user approvals and mail limits through one hosting account. Adds shared digests and scoped application/outreach reply metadata, with concurrency-safe updates. Host/user AI and mail permissions remain separate. Default deployment is private; optional shared manifest has identical scopes. 92 backend tests and 70 Chromium checks pass. Live Google pilot remains pending.

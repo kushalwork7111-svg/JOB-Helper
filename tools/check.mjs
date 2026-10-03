@@ -14,3 +14,8 @@ for (const name of ['Styles', 'Client']) {
   if (!fs.readFileSync('Index.html', 'utf8').includes(`include_('${name}')`)) throw new Error(`Missing ${name} include.`);
 }
 console.log('Client syntax, template includes, and private Apps Script manifest OK.');
+
+const shared=JSON.parse(fs.readFileSync('appsscript.shared.json','utf8'));
+if(shared.webapp.access!=='ANYONE_ANONYMOUS'||shared.webapp.executeAs!=='USER_DEPLOYING')throw new Error('Shared deployment must execute as the host.');
+if(JSON.stringify(shared.oauthScopes)!==JSON.stringify(manifest.oauthScopes))throw new Error('Shared mode must not broaden Google scopes.');
+console.log('Shared manifest uses the same Google scopes and owner execution.');

@@ -31,6 +31,9 @@ function cvHeading_(line) {
   for (var type in groups) if (groups[type].indexOf(heading) >= 0) return type;
   return '';
 }
+function cvInline_(raw) {
+  return /^\s*([A-Za-z &]{3,32}?)\s{2,}(\S.*)$/.exec(raw) || /^\s*([A-Za-z &]{3,32}?)\s*:\s*(\S.*)$/.exec(raw);
+}
 function cvContact_(line) {
   return /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:https?:\/\/|www\.|linkedin\.com\/|github\.com\/)/i.test(line) ||
     /(?:\+\d{1,3}[\s.-]*)?(?:\(?\d{3,5}\)?[\s.-]+){1,3}\d{3,5}/.test(line) && /\b(?:phone|mobile|tel)\b|\+|^\s*[\d(]/i.test(line);
@@ -47,14 +50,16 @@ function parseCvDrafts_(text) {
     offset += raw.length + 1;
   });
   var drafts = [], sections = [], current = {type: '', title: 'Unclassified CV text', lines: []};
-  var hasHeading = lines.some(function (line) { var margin = /^\s*([A-Za-z &]{3,32}?)\s{2,}\S/.exec(line.raw); return !!cvHeading_(line.value) || !!(margin && cvHeading_(margin[1])); });
+  var hasHeading = lines.some(function (line) { var margin = cvInline_(line.raw); return !!cvHeading_(line.value) || !!(margin && cvHeading_(margin[1])); });
   lines.forEach(function (line) {
-    var margin = /^\s*([A-Za-z &]{3,32}?)\s{2,}(\S.*)$/.exec(line.raw);
+    var margin = cvInline_(line.raw);
     var inlineType = margin ? cvHeading_(margin[1]) : '';
-    var type = cvHeading_(line.value) || inlineType;
-    if (type) { sections.push(current); current = {type: type, title: line.value, lines: []}; }
+    var mixedColumns = line.raw.trim().split(/\s{2,}/).filter(function (part) { return !!cvHeading_(part); }).length > 1;
+    var type = mixedColumns ? 'review' : cvHeading_(line.value) || inlineType;
+    if (type) { sections.push(current); current = {type: type, title: mixedColumns ? 'Merged CV columns' : inlineType ? margin[1].trim() : line.value, lines: []}; }
     else current.lines.push(line);
-    if (inlineType) { var at = line.raw.indexOf(margin[2]); current.lines.push({raw: margin[2], value: margin[2].trim(), start: line.start + at, end: line.end}); }
+    if (mixedColumns) { current.lines.push(line); return; }
+    if (inlineType) { var at = line.raw.length - margin[2].length; current.lines.push({raw: margin[2], value: margin[2].trim(), start: line.start + at, end: line.end}); }
   });
   sections.push(current);
   function emit(group, type, section, warning, context) {
@@ -87,13 +92,13 @@ function parseCvDrafts_(text) {
   sections.forEach(function (section) {
     var rows = section.lines.filter(function (line) { return !cvContact_(line.value); });
     if (!section.type && hasHeading) return; // Name/address/header are not employment.
-    if (section.type === 'summary' || !section.type) {
+    if (section.type === 'summary' || section.type === 'review' || !section.type) {
       emit(rows, 'review', section.title, 'Mixed or unclassified text. Choose a specific category and separate claims before approval.'); return;
     }
     if (section.type === 'qualification') {
       var nonblank = rows.filter(function (r) { return !!r.value; });
       var columnOrder = nonblank.filter(function (r) { return /^(?:19|20)\d{2}$/.test(r.value); }).length > 1 ||
-        nonblank.some(function (r) { return /^(?:course|year|institution|score|grade|degree)$/i.test(r.value); });
+        nonblank.some(function (r) { return /^(?:course|year|institution|score|grade|degree)$/i.test(r.value) || /^(?:course\s+year\s+institution\s+score|degree\s+year\s+institution\s+grade)(?:\s+\S|\S)/i.test(r.value); });
       if (columnOrder) { emit(rows, 'review', section.title, 'Education table extracted in column order. Verify course, year, institution and score against the PDF; no row associations were guessed.'); return; }
       var group = [];
       function degreeStart(line) { return /^(?:CA\s+(?:Final|Intermediate|Foundation)|B\.?\s*(?:Com|Sc|A|Tech|Eng)\b|M\.?\s*(?:Com|Sc|A|Tech|BA)\b|MBA\b|Ph\.?D\b|Bachelor|Master|Doctor|Chartered|\d{1,2}(?:th|st|nd|rd)\b)/i.test(line); }

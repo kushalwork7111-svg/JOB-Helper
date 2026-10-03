@@ -49,7 +49,8 @@ function geminiText_(instruction, data, grounded) {
   return {text: candidate.content.parts.filter(function (p) { return !p.thought && p.text; }).map(function (p) { return p.text; }).join(''),
     grounding: candidate.groundingMetadata || {}};
 }
-function geminiJson_(instruction, data) { return parseModelJson_(geminiText_(instruction, data, false).text); }
+function geminiJson_(instruction, data) {
+  if (!isHost_() && !sharedConfig_().ai) throw new Error('The host has not enabled shared AI processing.'); return parseModelJson_(geminiText_(instruction, data, false).text); }
 function validateIntegrations_() {
   var raw = geminiJson_('Return exactly {"ok":true}.', {purpose: 'Connection check; no CV data is included.'});
   if (raw.ok !== true) throw new Error('AI backend responded but failed the structured-output check.');

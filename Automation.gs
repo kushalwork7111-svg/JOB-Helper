@@ -1,4 +1,5 @@
 function installDailyTrigger_(prefs) {
+  if (sharedEnabled_()) { ensureSharedTrigger_(); return; }
   var own = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'dailyJobAgent'; });
   own.forEach(function (t) { ScriptApp.deleteTrigger(t); });
   if (prefs.dailyEmail) {
@@ -60,7 +61,7 @@ function sendDigest_(manual) {
     throw new Error('Google email quota is exhausted. No digest was sent.');
   }
   try {
-    MailApp.sendEmail({to: ownerEmail_(), name: 'Career Radar - Opportunities', subject: 'Job Helper · ' + jobs.length + ' opportunities · ' + date,
+    MailApp.sendEmail({to: userEmail_(), name: 'Career Radar - Opportunities', subject: 'Job Helper · ' + jobs.length + ' opportunities · ' + date,
       body: jobs.map(function (j) { return j.title + ' — ' + j.company + '\n' + j.url; }).join('\n\n') || 'No verified matches today. Open your dashboard to review filters and scan status.',
       htmlBody: html});
     if (!manual) props_().setProperty(claimKey, 'sent');
@@ -70,5 +71,37 @@ function sendDigest_(manual) {
   } catch (e) {
     if (!manual && props_().getProperty(claimKey) !== 'sent') props_().setProperty(claimKey, 'uncertain');
     throw e;
+  }
+}
+
+function ensureSharedTrigger_() {
+  var handler = 'dailySharedJobAgent_';
+  var existing = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === handler; });
+  if (sharedEnabled_()) {
+    if (!existing.length) ScriptApp.newTrigger(handler).timeBased().everyMinutes(15).create();
+    ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'dailyJobAgent'; }).forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  } else existing.forEach(function (t) { ScriptApp.deleteTrigger(t); });
+}
+function dailySharedJobAgent_(event) {
+  // Private handler: inaccessible via google.script.run. Only the registered owner trigger can run it.
+  if (!sharedEnabled_() || !event || !event.triggerUid || !ScriptApp.getProjectTriggers().some(function (t) {
+    return t.getHandlerFunction() === 'dailySharedJobAgent_' && t.getUniqueId() === String(event.triggerUid);
+  })) return;
+  if (!globalProps_().getProperty('DATABASE_ID')) return;
+  pruneDailyState_();
+  var started = Date.now(), users = users_().filter(function (u) { return u.enabled; });
+  var cursor = Number(globalProps_().getProperty('SHARED_DAILY_CURSOR') || 0);
+  for (var i = 0; i < users.length && Date.now() - started < 180000; i++) {
+    var user = users[(cursor + i) % users.length];
+    withActor_({id: user.id, email: user.email, admin: user.id === 'owner'}, function () {
+      var prefs = getSettings_(), date = Utilities.formatDate(new Date(), prefs.timezone, 'yyyy-MM-dd');
+      if (!prefs.dailyEmail || Number(Utilities.formatDate(new Date(), prefs.timezone, 'HH')) < prefs.digestHour || props_().getProperty('DIGEST_DELIVERY_' + date)) return;
+      try {
+        if (prefs.features.discovery && prefs.sources.length) scanJobs_();
+        syncReplies_();
+        sendDigest_(false); props_().setProperty('LAST_DAILY_RUN', new Date().toISOString());
+      } catch (e) { activity_('warning', 'Daily briefing did not finish. Review your scan and email quota.'); }
+    });
+    globalProps_().setProperty('SHARED_DAILY_CURSOR', String((cursor + i + 1) % users.length));
   }
 }

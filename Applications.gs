@@ -84,7 +84,8 @@ function assertApproved_(input) {
   if (input.approved !== true) throw new Error('Your explicit approval is required before this message can be sent.');
 }
 function assertOutgoingRecipient_(recipient) {
-  if (!getSettings_().externalSendingEnabled && String(recipient).toLowerCase() !== ownerEmail_().toLowerCase()) {
+  if (!isHost_() && !sharedConfig_().externalEmail) throw new Error('The host has not enabled external email.');
+  if (!getSettings_().externalSendingEnabled && String(recipient).toLowerCase() !== userEmail_().toLowerCase()) {
     throw new Error('External email is disabled. Test to your own account, confirm receipt in Preferences, then enable external sending.');
   }
 }
@@ -97,7 +98,7 @@ function assertPacketReady_(application) {
   }
   safeMessage_(application.subject, application.coverLetter);
 }
-function trackingTag_(application) { return 'JH-' + application.id.replace(/-/g, '').slice(0, 12); }
+function trackingTag_(application) { return tenantId_() === 'owner' ? 'JH-' + application.id.replace(/-/g, '').slice(0, 12) : 'JH-' + authHash_(tenantId_() + '|' + application.id).slice(0, 24); }
 function updateDeliveryPhase_(id, kind, draftId, phase) {
   return locked_(function () {
     var latest = find_('applications', id);
@@ -130,7 +131,7 @@ function sendApplication_(input) {
         latest.cvFileId !== original.cvFileId || JSON.stringify(latest.answers) !== JSON.stringify(original.answers)) {
       throw new Error('The packet changed during approval. Review it again.');
     }
-    latest.delivery = {phase: 'sending', at: new Date().toISOString()};
+    latest.delivery = {phase: 'sending', at: new Date().toISOString(), approvedBy: tenantId_()};
     return putUnlocked_('applications', latest);
   });
   var body = message.body + '\n\n';
@@ -139,7 +140,7 @@ function sendApplication_(input) {
   try {
     var mail = {to: application.recipient, name: 'Career Radar - Applications', subject: message.subject + ' [' + trackingTag_(application) + ']', body: body};
     if (application.cvFileId) mail.attachments = [privateDriveFile_(application.cvFileId).getBlob()];
-    MailApp.sendEmail(mail);
+    sharedMail_(mail);
     application = updateDeliveryPhase_(application.id, 'application', '', 'sent');
     createFollowUpReminder_(application);
     activity_('sent', 'Approved email application sent to ' + application.recipient + ' for ' + application.company + '.');
@@ -271,12 +272,12 @@ function sendOutreach_(input) {
     if (!validEmail_(input.recipient) || input.recipientConfirmed !== true) throw new Error('Confirm the recipient email from an official source.');
     assertOutgoingRecipient_(input.recipient);
     if (!draft.affiliationConfirmed || !validWebUrl_(draft.affiliationSource)) throw new Error('Confirm this contact’s current affiliation and save its public evidence URL before outreach.');
-    draft.subject = message.subject; draft.body = message.body; draft.recipient = input.recipient; draft.status = 'sending';
+    draft.subject = message.subject; draft.body = message.body; draft.recipient = input.recipient; draft.status = 'sending'; draft.approvedBy = tenantId_();
     return putUnlocked_('applications', record);
   });
   var draft = app.outreach.find(function (d) { return d.id === input.draftId; });
   try {
-    MailApp.sendEmail({to: draft.recipient, name: 'Career Radar - Applications', subject: draft.subject, body: draft.body});
+    sharedMail_({to: draft.recipient, name: 'Career Radar - Applications', subject: draft.subject + ' [' + trackingTag_(app) + ']', body: draft.body});
     updateDeliveryPhase_(app.id, 'outreach', draft.id, 'sent');
     activity_('outreach', 'Approved outreach email sent for ' + app.company + '.');
     return {sent: true};
@@ -286,6 +287,7 @@ function sendOutreach_(input) {
   }
 }
 function replyMetadata_(app) {
+  // Only this actor’s reference is queried; tenants receive strictly matched metadata, never mailbox access.
   if (!app.submittedAt || app.status === 'submitted_external') return [];
   var q = 'in:inbox subject:' + trackingTag_(app) + ' after:' + Math.floor(Date.parse(app.submittedAt) / 1000);
   var root = 'https://gmail.googleapis.com/gmail/v1/users/me/';
@@ -296,41 +298,67 @@ function replyMetadata_(app) {
     var fields = {};
     ((meta.payload || {}).headers || []).forEach(function (h) { fields[h.name.toLowerCase()] = cleanText_(h.value, 500); });
     return {id: m.id, from: fields.from || '', subject: fields.subject || '', date: fields.date || ''};
+  }).filter(function (reply) {
+    if (isHost_()) return true;
+    var tags = reply.subject.match(/\bJH-[a-z0-9]{6,64}\b/gi) || [];
+    var from = reply.from.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    return tags.length === 1 && tags[0].toLowerCase() === trackingTag_(app).toLowerCase() && from &&
+      app.recipientConfirmed === true && from[0].toLowerCase() === String(app.recipient).toLowerCase();
   });
 }
 function syncReplies_() {
-  var updated = 0, errors = [];
+  var updated = 0, errors = [], outreachUpdated = 0, outreachChecked = 0;
   rows_('applications').filter(function (a) { return a.status === 'sent_email'; }).slice(0, 30).forEach(function (app) {
     try {
       var replies = replyMetadata_(app);
       if (replies.length) {
-        app.status = 'replied'; app.repliedAt = new Date().toISOString(); app.replies = replies;
-        put_('applications', app); cancelFollowUps_(app.id); updated++;
+        mergeReply_(app.id, replies); cancelFollowUps_(app.id); updated++;
       }
     } catch (e) { errors.push(app.company + ': reply check failed. Verify Gmail read permission.'); }
   });
-  return {updated: updated, errors: errors, note: 'Matches inbox metadata by the subject reference. Replies with changed subjects and external-form applications need manual status updates.'};
+  rows_('applications').slice(0, 30).forEach(function (app) {
+    var replyUpdates = [];
+    (app.outreach || []).filter(function (draft) { return draft.channel === 'email' && draft.status === 'sent' && draft.sentAt; }).forEach(function (draft) {
+      if (outreachChecked++ >= 6) return;
+      try {
+        var replies = replyMetadata_(Object.assign({}, app, {status: 'sent_email', submittedAt: draft.sentAt,
+          recipient: draft.recipient, recipientConfirmed: true}));
+        if (replies.length) replyUpdates.push({id: draft.id, replies: replies});
+      } catch (e) { errors.push(app.company + ': outreach reply check failed.'); }
+    });
+    if (replyUpdates.length) locked_(function () {
+      var latest = find_('applications', app.id); if (!latest) return;
+      replyUpdates.forEach(function (update) {
+        var draft = (latest.outreach || []).find(function (d) { return d.id === update.id; });
+        if (draft && draft.status === 'sent') { draft.status = 'replied'; draft.replies = update.replies; draft.repliedAt = new Date().toISOString(); outreachUpdated++; }
+      });
+      putUnlocked_('applications', latest);
+    });
+  });
+  return {updated: updated, errors: errors, outreachUpdated: outreachUpdated, note: 'Matches inbox metadata by the subject reference. Replies with changed subjects/senders, direct replies to your candidate address and external-form applications need manual status updates.'};
 }
 function sendFollowUp_(input) {
   assertApproved_(input);
   var app = find_('applications', input.id);
   if (!app || ['sent_email', 'submitted_external'].indexOf(app.status) < 0 || app.followUpDelivery) throw new Error('Follow-up unavailable, already sent, or awaiting delivery confirmation.');
   if (app.status === 'sent_email' && replyMetadata_(app).length) {
-    app.status = 'replied'; app.repliedAt = new Date().toISOString(); put_('applications', app); cancelFollowUps_(app.id);
+    mergeReply_(app.id, []); cancelFollowUps_(app.id);
     throw new Error('An inbox reply was found. No follow-up was sent.');
   }
+  if ((app.outreach || []).some(function (draft) { return draft.status === 'replied'; })) throw new Error('A related contact has replied. Review that conversation before sending an application follow-up.');
   if (input.confirmedNoReply !== true) throw new Error('Confirm you checked for replies, including changed email subjects or the employer portal.');
   if (!validEmail_(input.recipient) || input.recipientConfirmed !== true) throw new Error('Confirm a verified recipient email.');
   assertOutgoingRecipient_(input.recipient);
   var message = safeMessage_(input.subject, input.body);
   app = locked_(function () {
     var latest = find_('applications', input.id);
+    if ((latest.outreach || []).some(function (draft) { return draft.status === 'replied'; })) throw new Error('A related contact has replied. Review that conversation first.');
     if (['sent_email', 'submitted_external'].indexOf(latest.status) < 0 || latest.followUpDelivery) throw new Error('Follow-up is no longer available.');
-    latest.followUpDelivery = {phase: 'sending', at: new Date().toISOString()};
+    latest.followUpDelivery = {phase: 'sending', at: new Date().toISOString(), approvedBy: tenantId_()};
     return putUnlocked_('applications', latest);
   });
   try {
-    MailApp.sendEmail({to: input.recipient, name: 'Career Radar - Reminders', subject: message.subject + ' [' + trackingTag_(app) + ']', body: message.body});
+    sharedMail_({to: input.recipient, name: 'Career Radar - Reminders', subject: message.subject + ' [' + trackingTag_(app) + ']', body: message.body});
     app = updateDeliveryPhase_(app.id, 'followup', '', 'sent');
     cancelFollowUps_(app.id); activity_('followup', 'Approved follow-up sent for ' + app.company + '.');
     return {sent: true};
@@ -338,4 +366,24 @@ function sendFollowUp_(input) {
     updateDeliveryPhase_(app.id, 'followup', '', 'uncertain');
     throw new Error('Check Sent mail. Follow-up will not automatically retry.');
   }
+}
+
+function mergeReply_(id, replies) {
+  return locked_(function () {
+    var latest = find_('applications', id); if (!latest) return;
+    if (latest.status === 'sent_email') latest.status = 'replied';
+    latest.repliedAt = new Date().toISOString(); if (replies.length) latest.replies = replies;
+    return putUnlocked_('applications', latest);
+  });
+}
+// Host-only recovery for a tenant’s uncertain delivery after checking the shared Sent mailbox.
+function resolveSharedDelivery(userId, applicationId, kind, draftId, confirmedSent) {
+  requireOwner_();
+  var user = users_().find(function (u) { return u.id === userId; });
+  if (!user) throw new Error('Unknown site account.');
+  return withActor_({id: user.id, email: user.email, admin: user.id === 'owner'}, function () {
+    if (kind === 'application') resolveDelivery(applicationId, confirmedSent);
+    else resolveMessageDelivery(applicationId, kind, draftId, confirmedSent);
+    return {resolved: true};
+  });
 }

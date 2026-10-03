@@ -66,3 +66,13 @@ Added optional local automated installation via pinned Google clasp 3.4.1: new s
 - Syntax/manifest, deployment packaging, ZIP checks and installer dry check passed. No real email/AI call happened. Document formatting functions are unchanged, so document rendering QA was not repeated.
 - Private PDF/text stay outside Git; generated aggregate report is ignored at `artifacts/cv-parser-report.json`.
 - Google OCR, source update, redeployment and live site QA remain unrun; cloud has no Google deployment authorization. The current version remains single-owner/private; agreed central-account multi-user isolation is pending.
+
+## 1.1.0 shared-user QA — 3 October 2026
+
+**92 backend tests passed**, including production tenant-aware Sheet read/write functions against a minimal Sheet adapter. Covers invitation/code limits and one-time use, token expiration/revocation, per-user profiles/settings/jobs/facts/documents/folders/property isolation, spoofed IDs/tenant values, legacy owner-only rows, authenticated file downloads, host permissions, mail gates/approval/limits/candidate identity, strict sender/reference reply filtering, separate outreach replies, concurrent note/stage preservation, private shared scheduling, and duplicate per-user digest prevention.
+
+**70 Chromium checks passed**: original app workflows/responsiveness plus owner invitation/Access UI, anonymous login/no-owner-data, actual code verification against the mocked backend, own-profile-only view, hidden host controls/disabled credential input, shared settings at 320/390/768px, and logout clearing sessions/private drafts/dialogs. No real email/code/invitation, employer submission or AI request occurred.
+
+Syntax/manifest checks and ZIP CRC/file checks passed. Both manifests execute as host and have identical OAuth scopes; the default is private. Optional shared pilot file serves a login shell to visitors, with data authorization enforced on the server. The updated parser remains included; real PDF/source QA was repeated after additional inline-heading, merged-column and OCR-header fixes. Document formatting is unchanged, so rendering was not repeated.
+
+Shared hosting, Google OAuth/code delivery, live Drive/Gmail behavior, trigger timing and real quotas are **unrun**. Do not treat mocked tests as live validation. No Google account is connected to the cloud; use docs/GOOGLE_ACCESS.md. Live pilot/rollback instructions are in docs/SHARED_SITE.md. Generated reports/private CVs/credentials stay out of Git.

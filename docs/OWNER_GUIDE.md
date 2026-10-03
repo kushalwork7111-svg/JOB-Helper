@@ -30,3 +30,7 @@ Clasp development authorization is separate from the app scopes and may cover ma
 After updating the deployed version, click **Extract draft CV excerpts** again. The app archives untouched drafts from the older parser, while preserving approved facts and facts you edited. New rows show their CV section and employment context. A mixed summary or a shuffled education table is marked **Needs categorization**; it cannot be approved in that category. Compare against your original PDF, separate claims or repair the row, choose its category and explicitly approve it. The app cannot reconstruct table relationships after layout information is lost.
 
 For deployment access without manual copying, see [GOOGLE_ACCESS.md](GOOGLE_ACCESS.md).
+
+## Shared access (1.1.0)
+
+The shared version is now implemented and tested locally. Use **Access** to invite emails and configure host allowances; users sign in with an emailed code and see only their records. All emails and replies pass through the hosting account, with per-user approval and scoped reply metadata. Use authenticated Download buttons for exports; direct Google Docs editing is available only to the host. The hosting Google account can access the stored data. Follow [SHARED_SITE.md](SHARED_SITE.md) for the required live two-account pilot; this has not been deployed or validated in Google yet.

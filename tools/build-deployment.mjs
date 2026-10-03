@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {zip} from './archive.mjs';
-const order=['Core.gs','Store.gs','Candidates.gs','Imports.gs','Refinements.gs','PrivateDrive.gs','Documents.gs','DocumentFormat.gs','Integrations.gs','Jobs.gs','Applications.gs','Automation.gs','Code.gs'];
+const order=['Core.gs','Auth.gs','Store.gs','Candidates.gs','Imports.gs','Refinements.gs','PrivateDrive.gs','Documents.gs','DocumentFormat.gs','Integrations.gs','Jobs.gs','Applications.gs','Automation.gs','Code.gs'];
 const code=order.map(f=>`// ===== ${f} =====\n${fs.readFileSync(f,'utf8')}`).join('\n\n');
 new vm.Script(code,{filename:'deployment/Code.gs'});
 const html=fs.readFileSync('Index.html','utf8').replace("<?!= include_('Styles'); ?>",()=>fs.readFileSync('Styles.html','utf8')).replace("<?!= include_('Client'); ?>",()=>fs.readFileSync('Client.html','utf8'));
@@ -19,3 +19,7 @@ fs.writeFileSync('artifacts/Job-Helper-Automated-Installer.zip',zip(installerPar
 fs.mkdirSync('artifacts/installer',{recursive:true});
 for(const p of installerParts)fs.writeFileSync('artifacts/installer/'+p.path,p.content);
 console.log('Built optional automated installer. Google OAuth and deployment remain untested live.');
+
+const sharedParts=parts.map(part=>part.path==='appsscript.json'?{...part,content:fs.readFileSync('appsscript.shared.json','utf8')}:part.path==='START-HERE.txt'?{...part,content:'JOB HELPER SHARED PILOT — one Google host, invited site users\n\nDeploy to the existing Job Helper project only after backing up its source and verifying its Script ID. Keep the private deployment as a rollback. This manifest executes as the hosting account and lets anonymous visitors reach the login shell; all data routes require a verified invited user or the native owner.\n\nFirst install/run the private version, open Access, enable invitation sign-in and grant an email address. Shared employer mail and AI stay off until the host explicitly enables them. Then create the reviewed shared pilot deployment from this manifest. Use two test accounts to verify isolation and owner-only files before real CVs. No additional subscriptions. No employer sends during login/file/digest checks.\n\nEach user approves their own messages. All sends use the host Google account with the candidate identity and host Reply-To. Users see only their own records. The host Google account inherently stores/can access the data. Replies to the host are matched by a private per-user application reference and verified sender, with metadata only. Changed subjects/senders or direct candidate replies need manual status updates.\n\nLimits: 25 invited accounts including host; shared Google quota; bounded login codes and employer mail. Google OAuth, live hosting, Drive conversion and email are untested live.\n'}:part);
+fs.writeFileSync('artifacts/Job-Helper-Shared-Pilot.zip',zip(sharedParts));
+console.log('Built optional shared pilot bundle; default installation remains private.');

@@ -41,3 +41,11 @@ function exportDocument_(input) {
   put_('documents', record); activity_('export', 'Created private ' + input.format.toUpperCase() + ' ' + input.documentType + ' for ' + app.company + '.');
   return record;
 }
+
+function downloadDocument_(input) {
+  var record = find_('documents', input.id);
+  if (!record || !record.fileId) throw new Error('Document not found in your records.');
+  var blob = privateDriveFile_(record.fileId).getBlob();
+  if (blob.getBytes().length > 5 * 1024 * 1024) throw new Error('This download exceeds 5 MB. Ask the host for a private file transfer.');
+  return {name: blob.getName(), mimeType: blob.getContentType(), base64: Utilities.base64Encode(blob.getBytes())};
+}

@@ -80,3 +80,12 @@ test('re-extraction archives untouched legacy drafts while retaining approved an
 test('review edits keep provenance and employment context',()=>{
  const h=harness();h.c.put_('profile',{...h.profile,cvText:cv});h.c.extractFacts_();const p=h.c.rows_('facts').find(f=>f.statement.startsWith('Technology Diligence:'));const saved=h.c.saveFact_({...p,confirmed:true,approved:true});assert.equal(saved.sourceSection,'WORK EXPERIENCE');assert.match(saved.employmentContext,/Senior Associate/);
 });
+test('a collapsed OCR table header is held for review rather than grouping ScoreCA as a qualification',()=>{
+ const f=parse('EDUCATION\nCourse Year Institution ScoreCA Final 2025 Chartered Institute 300/600 Example College\nof Science and Commerce\nSKILLS\nExcel');const edu=f.filter(x=>x.sourceSection==='EDUCATION');assert.equal(edu.length,1);assert.equal(edu[0].type,'review');assert.match(edu[0].statement,/ScoreCA/);assert.ok(!edu.some(x=>x.type==='experience'));
+});
+test('merged headings from two-column resumes are retained as review-only text',()=>{
+ const f=parse('EDUCATION       WORK EXPERIENCE\nB.Com 2021      Senior Analyst 2022-Present\nExample College  Example Advisory');assert.ok(f.length);assert.ok(f.every(x=>x.type==='review'));assert.ok(f.map(x=>x.statement).join('\n').includes('Example College'));
+});
+test('inline colon headings preserve short skills and exact content offsets',()=>{
+ const source='SUMMARY: Chartered Accountant with advisory experience\nSkills: SQL, Excel\nCertifications: Certified Analyst';const f=parse(source);assert.equal(f[0].type,'review');assert.equal(f[1].type,'skill');assert.equal(f[1].statement,'SQL, Excel');assert.equal(f[1].sourceSection,'Skills');assert.equal(f[2].type,'qualification');assert.ok(f.every(x=>source.slice(x.sourceStart,x.sourceEnd).trim()===x.statement));
+});

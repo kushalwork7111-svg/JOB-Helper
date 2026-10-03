@@ -1,4 +1,10 @@
-function props_() { return PropertiesService.getScriptProperties(); }
+function props_() {
+  var global = globalProps_(), id = tenantId_();
+  function key(name) { return id === 'owner' || ['DATABASE_ID','GEMINI_API_KEY','AI_GATEWAY_URL','AI_GATEWAY_TOKEN'].indexOf(name) >= 0 ? name : 'USER_' + id + '_' + name; }
+  return {getProperty: function (name) { return global.getProperty(key(name)); },
+    setProperty: function (name, value) { global.setProperty(key(name), value); return this; },
+    deleteProperty: function (name) { global.deleteProperty(key(name)); return this; }};
+}
 function ownerEmail_() {
   var email = Session.getEffectiveUser().getEmail();
   if (!validEmail_(email)) throw new Error('Deploy privately with your own Google account.');
@@ -28,18 +34,21 @@ function table_(name) {
 function rows_(name) {
   var sheet = table_(name);
   if (sheet.getLastRow() < 2) return [];
-  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues().map(function (row) {
+  var records = sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues().map(function (row) {
     try { return JSON.parse(row[1]); } catch (e) { throw new Error('Unreadable data in ' + name + '. Restore from your spreadsheet backup.'); }
   });
+  return records.filter(function (record) { return (record.tenantId || 'owner') === tenantId_(); });
 }
 function find_(name, id) { return rows_(name).find(function (r) { return r.id === id; }) || null; }
 function putUnlocked_(name, record) {
+  record = Object.assign({}, record, {tenantId: tenantId_()});
+  var storedId = tenantId_() === 'owner' ? record.id : tenantId_() + '|' + record.id;
   var json = JSON.stringify(record);
   if (json.length > 47000) throw new Error('This record is too large. Shorten the CV or job description.');
   var sheet = table_(name), last = sheet.getLastRow(), ids = last < 2 ? [] : sheet.getRange(2, 1, last - 1, 1).getValues();
-  var index = ids.findIndex(function (r) { return r[0] === record.id; });
+  var index = ids.findIndex(function (r) { return r[0] === storedId; });
   // JSON begins with a brace and cannot be interpreted as a spreadsheet formula.
-  sheet.getRange(index < 0 ? last + 1 : index + 2, 1, 1, 3).setValues([[record.id, json, new Date().toISOString()]]);
+  sheet.getRange(index < 0 ? last + 1 : index + 2, 1, 1, 3).setValues([[storedId, json, new Date().toISOString()]]);
   return record;
 }
 function put_(name, record) { return locked_(function () { return putUnlocked_(name, record); }); }
@@ -49,7 +58,7 @@ function activity_(type, message) {
   put_('activity', record);
 }
 function getSettings_() { var saved = find_('settings', 'preferences'); return settings_(saved ? saved.value : {}); }
-function getProfile_() { return find_('profile', 'cv') || {id: 'cv', cvText: '', name: '', email: '', skills: [], experience: [], questions: []}; }
+function getProfile_() { return find_('profile', 'cv') || {id: 'cv', cvText: '', name: '', email: userEmail_(), skills: [], experience: [], questions: []}; }
 function requireFeature_(name) {
   if (!getSettings_().features[name]) throw new Error('This feature is disabled in owner Preferences.');
 }

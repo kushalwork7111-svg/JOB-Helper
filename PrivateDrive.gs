@@ -22,7 +22,14 @@ function privateDriveFile_(metadata) {
 }
 function privateCvFolder_() {
   var id = props_().getProperty('CV_FOLDER_ID');
-  if (!id) throw new Error('Run setupJobHelper to create the private CV folder.');
+  if (!id) {
+    id = locked_(function () {
+      var existing = props_().getProperty('CV_FOLDER_ID');
+      if (existing) return existing;
+      var created = Drive.Files.create({name: 'Job Helper — user files', mimeType: 'application/vnd.google-apps.folder'}).id;
+      props_().setProperty('CV_FOLDER_ID', created); return created;
+    });
+  }
   return {createFile: function (blob) {
     return privateDriveFile_(Drive.Files.create({name: blob.getName(), mimeType: blob.getContentType(), parents: [id]}, blob,
       {fields: 'id,name,mimeType,webViewLink'}));
