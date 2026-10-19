@@ -1,4 +1,4 @@
-const APP_VERSION = '0.1';
+const APP_VERSION = '0.2';
 const SHEET_TITLE = 'Job Finder Data';
 const TRIGGER_SUBJECT = 'Job Finder: tailoring requested';
 const TABS = {
@@ -20,7 +20,7 @@ const CONFIG_DEFAULTS = [
   ['Weight Skills', '40', ''], ['Weight Title', '20', ''], ['Weight Experience', '15', ''],
   ['Weight Location', '15', ''], ['Weight Recency', '10', ''],
   ['Strong Score', '75', ''], ['Good Score', '55', ''],
-  ['Master CV Doc ID', '', 'Google Doc used as the CV template'],
+  ['Master CV Doc ID', '', 'Filled in when you upload your CV on the dashboard'],
   ['Alert Time If No Run', '10:30', 'IST; one email if research has not arrived'],
   ['Research Paused', 'NO', 'YES stops alerts']
 ];
@@ -183,16 +183,31 @@ function groundingProblems_(res, master) {
   return out.slice(0, 5);
 }
 
+/** Builds the tailored CV as a new Google Doc from the master CV facts plus the tailored wording. Works with any CV layout. */
 function buildCvDoc_(res, job, c) {
-  const copy = DriveApp.getFileById(c['Master CV Doc ID']).makeCopy('CV - ' + job.Company + ' - ' + job.Title);
-  const doc = DocumentApp.openById(copy.getId()), body = doc.getBody();
-  body.replaceText('{{SUMMARY}}', res.summary || '');
-  body.replaceText('{{SKILLS}}', (res.skills || []).join(' · '));
-  (res.experience || []).forEach((e, i) => body.replaceText('{{EXPERIENCE_' + (i + 1) + '}}', (e.bullets || []).map(b => '• ' + b).join('\n')));
-  body.replaceText('\\{\\{EXPERIENCE_\\d+\\}\\}', '');
-  body.appendPageBreak(); body.appendParagraph('Cover letter').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  const cv = cvData_(c), H = DocumentApp.ParagraphHeading;
+  const same = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  const doc = DocumentApp.create('CV - ' + job.Company + ' - ' + job.Title), body = doc.getBody();
+  body.appendParagraph(cv.name || '').setHeading(H.TITLE);
+  body.appendParagraph([cv.city, cv.phone, cv.email, cv.linkedin].filter(Boolean).join(' · '));
+  if (res.summary) { body.appendParagraph('Summary').setHeading(H.HEADING2); body.appendParagraph(res.summary); }
+  if ((res.skills || []).length) { body.appendParagraph('Skills').setHeading(H.HEADING2); body.appendParagraph(res.skills.join(' · ')); }
+  if ((cv.experience || []).length) body.appendParagraph('Experience').setHeading(H.HEADING2);
+  (cv.experience || []).forEach(e => {
+    const t = (res.experience || []).find(x => same(x.company, e.company) && same(x.role, e.role));
+    body.appendParagraph(e.role + ' · ' + e.company).setHeading(H.HEADING3);
+    body.appendParagraph([e.start, e.end].filter(Boolean).join(' – ') + (e.location ? ' · ' + e.location : ''));
+    (t && t.bullets && t.bullets.length ? t.bullets : e.bullets || []).forEach(b => body.appendListItem(b).setGlyphType(DocumentApp.GlyphType.BULLET));
+  });
+  if ((cv.education || []).length) {
+    body.appendParagraph('Education').setHeading(H.HEADING2);
+    cv.education.forEach(e => body.appendParagraph([e.degree, e.institution, e.year].filter(Boolean).join(', ')));
+  }
+  if ((cv.certifications || []).length) { body.appendParagraph('Certifications').setHeading(H.HEADING2); body.appendParagraph(cv.certifications.join(' · ')); }
+  body.appendPageBreak(); body.appendParagraph('Cover letter').setHeading(H.HEADING2);
   String(res.coverLetter || '').split(/\n+/).forEach(p => body.appendParagraph(p));
   doc.saveAndClose();
+  DriveApp.getFileById(doc.getId()).moveTo(folder_());
   return doc;
 }
 

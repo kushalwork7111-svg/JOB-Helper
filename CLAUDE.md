@@ -11,11 +11,15 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
 ## Releases
 | Version | Date | What changed | Recovery version |
 |---|---|---|---|
+| 0.2 | 2026-10-19 | CV upload: reads any CV layout, previews, configures Profile/Config on confirm; tailored CV built from CV facts (no template markers) (not yet deployed) | none |
 | 0.1 | 2026-10-19 | Phase 1: repo, starter app, local test harness (not yet deployed) | none |
 
 ## Layout
-- `src/` is the clasp root: `appsscript.json`, `Code.gs`, `Index.html`. Create the project with `clasp create --type standalone --rootDir src --title "Job Finder"`.
+- `src/` is the clasp root: `appsscript.json`, `Code.gs` (sheet, scoring, alerts, tailoring, apply), `Cv.gs` (CV reader and CV import), `Index.html`. Create the project with `clasp create --type standalone --rootDir src --title "Job Finder"`.
 - `tests/harness.js` runs `src/*.gs` in Node against in-memory fakes of SpreadsheetApp, MailApp, DriveApp, DocumentApp, PropertiesService, Utilities, ScriptApp, UrlFetchApp and Session. `tests/run.js` holds the checks.
+- CV reader: rule-based (no AI, no keys). Nothing about the owner's CV is hard-coded; the owner's CV lives only in their Drive and the Profile tab.
+  `tests/cv_fixtures.js` (tuning set) and `tests/cv_holdout.js` (written after tuning, to check it generalises) are fictional CVs in common layouts.
+  `node tests/cv_accuracy.js [tuning|holdout|all]` prints field-level accuracy. When a real CV is misread, add a fictional CV in the same layout to a set, then fix the reader.
 - `prompts/spark_skill/job-finder-v1/SKILL.md` is uploaded to Gemini as a skill; `prompts/gemini_tasks.md` holds the three task texts.
 
 ## Deploy routine
@@ -23,5 +27,5 @@ bump `APP_VERSION` → `node tests/run.js` → `clasp push --force` → `clasp d
 
 ## Phase status
 1. Repo and harness: done.
-2. Setup and sheet: next (needs owner's clasp sign-in and master CV).
+2. Setup and sheet: in progress. CV upload built and tested locally; waiting on the owner's clasp sign-in to create the live project and sheet.
 3–9: see the build brief.

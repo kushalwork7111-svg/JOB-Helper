@@ -2,12 +2,18 @@
 const assert = require('assert');
 const vm = require('vm');
 const { createEnv } = require('./harness');
+const accuracy = require('./cv_accuracy');
 
+// A plain CV with no special markers: the app must work from any CV layout.
 const MASTER_CV = [
-  'Kushal Example', '{{SUMMARY}}', 'Skills: {{SKILLS}}',
-  'Manager, Deal Advisory - Acme Advisors LLP (2021 - present)', '{{EXPERIENCE_1}}',
-  'Senior Analyst - Beta Consulting (2017 - 2021)', '{{EXPERIENCE_2}}',
-  'Led 12 due diligence projects worth INR 1,200 crore; cut reporting time by 30%.'
+  'Kushal Example', 'Mumbai | kushal@example.com | +91 98200 00000',
+  'SUMMARY', 'Chartered Accountant focused on deal advisory.',
+  'EXPERIENCE',
+  'Manager, Deal Advisory - Acme Advisors LLP (2021 - present)',
+  '• Led 12 due diligence projects worth INR 1,200 crore.',
+  'Senior Analyst - Beta Consulting (2017 - 2021)',
+  '• Cut reporting time by 30%.',
+  'SKILLS', 'Financial due diligence, Valuation, Excel'
 ].join('\n');
 
 /** A ready-to-use app: sheet created, Config and Profile filled, master CV in place. */
@@ -177,8 +183,10 @@ const tests = {
     const tr = env.app.rows_('Tailor Requests')[0];
     assert.ok(tr['Doc URL'] && tr['Notified At']);
     assert.strictEqual(jobRow(env, id).Status, 'Tailored');
-    const built = Object.values(env.state.docs).find(d => d.name.startsWith('CV - '));
-    assert.ok(!/\{\{/.test(built.body.getText()), 'all placeholders filled');
+    const built = Object.values(env.state.docs).find(d => d.name.startsWith('CV - ')).body.getText();
+    assert.ok(built.indexOf('Led 12 due diligence projects worth INR 1,200 crore.') >= 0, 'tailored bullet used');
+    assert.ok(built.indexOf('Senior Analyst · Beta Consulting') >= 0 && built.indexOf('Cut reporting time by 30%.') >= 0, 'other jobs kept from the CV');
+    assert.ok(built.indexOf('I cut reporting time by 30%.') >= 0, 'cover letter included');
     env.app.pollTick();
     assert.strictEqual(env.state.emails.filter(e => /Tailored CV ready/.test(e.subject)).length, 1, 'sent once');
   },
@@ -235,6 +243,48 @@ const tests = {
     env.app.pollTick();
     const list = env.app.getJobs();
     assert.ok(list[0].score >= list[1].score);
+  },
+
+  'CV reader extracts every expected fact from 18 CV layouts'() {
+    const sets = accuracy.SETS.tuning.concat(accuracy.SETS.holdout), misses = [];
+    accuracy.score(sets).forEach(r => r.checks.filter(c => !c.ok).forEach(c => misses.push(r.format + ' / ' + c.field + ': got "' + c.got + '"')));
+    assert.strictEqual(misses.length, 0, misses.join('\n'));
+  },
+
+  'uploading a CV shows a preview and changes nothing until confirmed'(env = createEnv()) {
+    env.app.setup();
+    const cv = accuracy.SETS.tuning[0].text;
+    const res = env.app.importCv('Rahul CV.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', Buffer.from(cv).toString('base64'));
+    assert.strictEqual(res.cv.name, 'Rahul Mehta');
+    assert.ok(res.plan.find(x => x.field === 'Experience Years' && x.proposed === '12.3' && x.change));
+    assert.strictEqual(env.app.cfg_()['Master CV Doc ID'], '', 'nothing saved yet');
+    assert.strictEqual(env.app.rows_('Profile').length, 0);
+    const folder = Object.values(env.state.folders)[0];
+    assert.ok(folder.files.indexOf(res.docId) >= 0, 'converted CV kept in the Job Finder folder');
+  },
+
+  'confirming a CV fills Profile and Config, keeping choices already made'(env = createEnv()) {
+    env.app.setup();
+    env.setConfig({ 'Locations': 'Bengaluru; Remote' });
+    const res = env.app.importCv('cv.txt', 'text/plain', Buffer.from(accuracy.SETS.tuning[0].text).toString('base64'));
+    const out = env.app.applyCv(res.docId);
+    const c = env.app.cfg_(), p = env.app.profile_();
+    assert.strictEqual(c['Master CV Doc ID'], res.docId);
+    assert.strictEqual(c['Experience Years'], '12.3');
+    assert.strictEqual(c['Target Titles'], 'Manager – Transaction Advisory');
+    assert.strictEqual(c.Locations, 'Bengaluru; Remote', 'owner choice kept');
+    assert.strictEqual(p.Name, 'Rahul Mehta');
+    assert.ok(/Financial Due Diligence/.test(p['Core Skills']) && /Power BI/.test(p.Tools));
+    assert.strictEqual(JSON.parse(p['CV Data']).experience.length, 3);
+    assert.ok(out.changed.indexOf('Name') >= 0);
+  },
+
+  'scoring uses skills read from an uploaded CV'(env = createEnv()) {
+    env.app.setup();
+    env.app.applyCv(env.app.importCv('cv.txt', 'text/plain', Buffer.from(accuracy.SETS.tuning[0].text).toString('base64')).docId);
+    const s = env.app.scoreJob_({ 'Title': 'Manager - Transaction Advisory', 'Location': 'Mumbai', 'Experience Asked': '10-14 years',
+      'Posted On': '2026-10-18', 'Must Have': 'Financial due diligence; Valuation', 'Nice To Have': 'Capital IQ' }, env.app.profile_(), env.app.cfg_());
+    assert.strictEqual(s.score, 100, s.breakdown);
   }
 };
 

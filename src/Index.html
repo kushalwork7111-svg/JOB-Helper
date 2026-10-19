@@ -9,10 +9,18 @@
  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
  .score{font-weight:bold} .muted{color:var(--muted);font-size:12px}
+ .plan{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0} .plan td,.plan th{border-bottom:1px solid var(--line);padding:6px;text-align:left;vertical-align:top;word-break:break-word}
+ .warn{background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px;font-size:13px}
  button{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer} button.primary{background:var(--accent);color:#fff;border:0}
 </style></head><body>
 <header>Job Finder <span class="muted" style="color:#94A3B8">v<?= version ?></span></header>
 <main>
+ <section class="card" style="margin-bottom:12px">
+  <b>My CV</b>
+  <div class="muted">Upload your CV (Word, PDF or text, any layout). The app reads it and sets itself up from it. Nothing is saved until you click "Use this CV".</div>
+  <div class="bar"><input type="file" id="cvfile" accept=".docx,.doc,.pdf,.txt,.rtf,.odt"><button onclick="uploadCv()">Read my CV</button></div>
+  <div id="cvout"></div>
+ </section>
  <div class="bar"><input id="q" placeholder="Search title or company" oninput="paint()"><select id="st" onchange="paint()"><option value="">All statuses</option><option>New</option><option>Shortlisted</option><option>Tailored</option><option>Applied</option></select></div>
  <div class="grid" id="grid">Loading…</div>
 </main>
@@ -30,5 +38,24 @@ function tailor(id){const note=prompt('Anything to stress for this job? (optiona
 function apply(id,ok){google.script.run.withSuccessHandler(r=>{
  if(r.open){window.open(r.open,'_blank');alert(r.note)}else if(r.needTailor){alert('Tailor your CV for this job first.')}
  else if(r.confirm){if(confirm(r.confirm))apply(id,true)}else if(r.sent){alert('Application sent.');load()}}).applyJob(id,!!ok)}
+const MIME={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',pdf:'application/pdf',txt:'text/plain',rtf:'application/rtf',odt:'application/vnd.oasis.opendocument.text'};
+let CVDOC='';
+function uploadCv(){const f=document.getElementById('cvfile').files[0],out=document.getElementById('cvout');
+ if(!f){alert('Choose your CV file first.');return}
+ if(f.size>10*1024*1024){alert('That file is over 10 MB.');return}
+ out.textContent='Reading your CV…';
+ const r=new FileReader();r.onload=()=>google.script.run.withSuccessHandler(showCv)
+  .withFailureHandler(e=>out.textContent='Could not read the CV: '+e.message)
+  .importCv(f.name,MIME[f.name.split('.').pop().toLowerCase()]||f.type,String(r.result).split(',')[1]);
+ r.readAsDataURL(f)}
+function showCv(res){CVDOC=res.docId;const cv=res.cv;
+ const jobs=cv.experience.map(e=>'<li>'+esc(e.role||'(title not found)')+' · '+esc(e.company||'(company not found)')+' <span class="muted">'+esc(e.start)+' – '+esc(e.end)+'</span></li>').join('');
+ const rows=res.plan.map(p=>'<tr><td>'+esc(p.field)+'</td><td>'+esc(p.current||'—')+'</td><td>'+(p.change?'<b>'+esc(p.proposed)+'</b>':esc(p.current||'—')+' <span class="muted">(kept)</span>')+'</td></tr>').join('');
+ document.getElementById('cvout').innerHTML=(cv.warnings.length?'<div class="warn">Please check: '+cv.warnings.map(esc).join('<br>')+'</div>':'')+
+  '<p><b>Jobs found</b> ('+cv.totalYears+' years in total, internships not counted)</p><ul>'+jobs+'</ul>'+
+  '<table class="plan"><tr><th>Setting</th><th>Now</th><th>After</th></tr>'+rows+'</table>'+
+  '<div class="bar"><button class="primary" onclick="useCv()">Use this CV</button><button onclick="document.getElementById(\'cvout\').innerHTML=\'\'">Cancel</button></div>'}
+function useCv(){if(!confirm('Save these details to your Job Finder settings?'))return;
+ google.script.run.withSuccessHandler(r=>{document.getElementById('cvout').innerHTML='Saved. '+r.changed.length+' settings updated. You can edit any of them in the Profile and Config tabs.'}).applyCv(CVDOC)}
 load();
 </script></body></html>

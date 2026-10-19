@@ -68,17 +68,19 @@ class Body {
   getText() { return this.text; }
   replaceText(pattern, replacement) { this.text = this.text.replace(new RegExp(pattern, 'g'), () => replacement); return this; }
   appendPageBreak() { this.text += '\n[page break]\n'; }
-  appendParagraph(p) { this.text += '\n' + p; return { setHeading: () => {} }; }
+  appendParagraph(p) { this.text += '\n' + p; const el = { setHeading: () => el, setGlyphType: () => el }; return el; }
+  appendListItem(p) { return this.appendParagraph('• ' + p); }
 }
 
-function blob(name, contentType) {
-  return { name, contentType, setName(n) { this.name = n; return this; }, getName() { return this.name; } };
+function blob(name, contentType, bytes) {
+  return { name, contentType, bytes, setName(n) { this.name = n; return this; }, getName() { return this.name; },
+    getDataAsString() { return Buffer.from(this.bytes || []).toString('utf8'); } };
 }
 
 function createEnv(opts) {
   opts = opts || {};
   const state = { now: opts.now || Date.parse('2026-10-19T03:30:00Z'), emails: [], triggers: [], logs: [],
-    spreadsheets: {}, docs: {}, props: {}, fetches: [], ids: 0, me: 'owner@example.com' };
+    spreadsheets: {}, docs: {}, folders: {}, props: {}, fetches: [], ids: 0, me: 'owner@example.com' };
   const newId = p => p + (++state.ids);
 
   // Date that follows the test clock when no arguments are given.
@@ -100,19 +102,32 @@ function createEnv(opts) {
     return d;
   };
   const DocumentApp = {
-    ParagraphHeading: { HEADING1: 'H1', HEADING2: 'H2' },
+    ParagraphHeading: { TITLE: 'TITLE', HEADING1: 'H1', HEADING2: 'H2', HEADING3: 'H3' },
+    GlyphType: { BULLET: 'BULLET' },
+    create: name => doc(newId('doc-'), name, ''),
     openById(id) { const d = state.docs[id]; if (!d) throw new Error('No document ' + id); return d; }
   };
+  const folder = (id, name) => (state.folders[id] = state.folders[id] || { id, name, files: [], getId: () => id, getName: () => name });
   const DriveApp = {
     getFileById(id) {
       const d = DocumentApp.openById(id);
       return {
         getId: () => id, getName: () => d.name,
         getAs: mime => blob(d.name, mime),
-        makeCopy: name => doc(newId('doc-'), name, d.body.getText())
+        makeCopy: name => doc(newId('doc-'), name, d.body.getText()),
+        moveTo: f => { f.files.push(id); }
       };
-    }
+    },
+    createFolder: name => folder(newId('folder-'), name),
+    getFolderById(id) { if (!state.folders[id]) throw new Error('No folder ' + id); return state.folders[id]; }
   };
+  // Advanced Drive service: uploading a Word/PDF/text file with a Google Docs type converts it to a Doc.
+  const Drive = { Files: { create(meta, b) {
+    if (meta.mimeType !== 'application/vnd.google-apps.document') throw new Error('Only conversion to Docs is mocked');
+    const d = doc(newId('doc-'), meta.name, b.getDataAsString());
+    (meta.parents || []).forEach(pid => DriveApp.getFolderById(pid).files.push(d.id));
+    return { id: d.id, name: meta.name };
+  } } };
 
   const store = {
     getProperty: k => (k in state.props ? state.props[k] : null),
@@ -132,7 +147,8 @@ function createEnv(opts) {
   const sandbox = {
     console, JSON, Math, Object, Array, String, Number, Boolean, RegExp, Error, isNaN, parseFloat, parseInt,
     Date: FakeDate,
-    SpreadsheetApp, DocumentApp, DriveApp,
+    SpreadsheetApp, DocumentApp, DriveApp, Drive,
+    MimeType: { GOOGLE_DOCS: 'application/vnd.google-apps.document', PDF: 'application/pdf' },
     PropertiesService: { getScriptProperties: () => store },
     MailApp: {
       sendEmail(a, subject, body) {
@@ -149,7 +165,11 @@ function createEnv(opts) {
     UrlFetchApp: {
       fetch(url) { state.fetches.push(url); return { getBlob: () => blob('export', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') }; }
     },
-    Utilities: { formatDate },
+    Utilities: {
+      formatDate,
+      base64Decode: b64 => Array.from(Buffer.from(b64, 'base64')),
+      newBlob: (bytes, type, name) => blob(name, type, bytes)
+    },
     Session: { getEffectiveUser: () => ({ getEmail: () => state.me }) },
     Logger: { log: m => state.logs.push(String(m)) },
     HtmlService: {
