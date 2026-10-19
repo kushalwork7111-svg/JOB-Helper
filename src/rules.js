@@ -112,7 +112,66 @@
     return best;
   }
 
-  const api = { hexToRgb, colorDistance, paletteColors, nearestColor, inPalette, sentenceCase, titleCase, applyCase, pickTitleIndex, offPosition, isFooterLike, mostCommon };
+  /**
+   * True if hex is a tint (mix with white) of base, e.g. 50% Slate. The guidelines allow tints of every
+   * palette colour except those in palette.noTints (BDO red and burgundy).
+   */
+  function isTintOf(hex, base) {
+    const c = hexToRgb(hex), b = hexToRgb(base);
+    if (!c || !b) return false;
+    let k = null;
+    for (let i = 0; i < 3; i++) {
+      if (b[i] === 255) { if (c[i] !== 255) return false; continue; }
+      const t = (c[i] - b[i]) / (255 - b[i]);
+      if (t < -0.02 || t > 1) return false;
+      if (k === null) k = t; else if (Math.abs(t - k) > 0.04) return false;
+    }
+    return true;
+  }
+
+  function isBrandColor(hex, palette) {
+    if (!hex) return true;
+    if (inPalette(hex, palette)) return true;
+    const noTints = (palette.noTints || []).map(c => c.toUpperCase());
+    return paletteColors(palette).some(c => noTints.indexOf(c) < 0 && c !== '#FFFFFF' && c !== '#000000' && isTintOf(hex, c));
+  }
+
+  /** The brand colour to use instead of hex, or null when hex is already fine. */
+  function snapColor(hex, palette) {
+    return isBrandColor(hex, palette) ? null : nearestColor(hex, palette);
+  }
+
+  /** Leftover drafting text such as XX, TBD, [ ], DRAFT. Returns the distinct matches. */
+  function findLeftovers(text, patterns) {
+    const found = [];
+    (patterns || []).forEach(p => {
+      const m = String(text).match(new RegExp(p, p === '\\bDRAFT\\b' ? 'g' : 'gi'));
+      (m || []).forEach(x => { if (found.indexOf(x) < 0) found.push(x); });
+    });
+    return found;
+  }
+
+  /** [start, length] of each run of 2+ spaces inside a line (indentation at the start of a line is left alone). */
+  function doubleSpaceRanges(text) {
+    const out = [], rx = / {2,}/g;
+    let m;
+    while ((m = rx.exec(text))) {
+      const before = text.charAt(m.index - 1);
+      if (m.index > 0 && before !== '\n' && before !== '\r' && before !== '\v') out.push([m.index, m[0].length]);
+    }
+    return out;
+  }
+
+  /** "Trebuchet MS (Headings)" → "Trebuchet MS"; theme references (+mj-lt) → null (unknown). */
+  function normalizeFont(name) {
+    if (!name) return null;
+    if (/^\+m[jn]-/.test(name)) return null;
+    return name.replace(/\s*\((Headings|Body)\)$/, '');
+  }
+
+  const api = { hexToRgb, colorDistance, paletteColors, nearestColor, inPalette, isTintOf, isBrandColor, snapColor,
+    sentenceCase, titleCase, applyCase, pickTitleIndex, offPosition, isFooterLike, mostCommon,
+    findLeftovers, doubleSpaceRanges, normalizeFont };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Rules = api;
 })(typeof self !== 'undefined' ? self : this);

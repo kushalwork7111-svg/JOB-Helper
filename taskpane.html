@@ -3,34 +3,47 @@
 <title>Client-Ready</title>
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 <style>
- body{font:13px/1.4 "Segoe UI",Arial,sans-serif;margin:0;color:#1F2937;background:#F8FAFC}
- header{background:#1F2937;color:#fff;padding:12px 14px;font-weight:600}
+ body{font:13px/1.4 "Trebuchet MS","Segoe UI",Arial,sans-serif;margin:0;color:#1F2937;background:#F8FAFC}
+ header{background:#333333;color:#fff;padding:12px 14px;font-weight:600}
  #draft{background:#FEF3C7;color:#92400E;padding:8px 14px;font-size:12px;border-bottom:1px solid #FCD34D}
  section{padding:12px 14px;border-bottom:1px solid #E5E7EB}
  h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6B7280}
  label{display:block;font-size:12px;color:#4B5563;margin-top:6px}
  button{display:block;width:100%;margin:6px 0;padding:9px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;text-align:left;cursor:pointer;font:inherit}
  button:hover{border-color:#94A3B8} button:disabled{opacity:.6;cursor:wait}
- button.primary{background:#C8102E;color:#fff;border:0}
+ button.primary{background:#E81A3B;color:#fff;border:0}
  select,input{width:100%;padding:7px;margin:4px 0;box-sizing:border-box;font:inherit}
  #log{white-space:pre-wrap;font-size:12px;background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:8px;min-height:60px}
  a.goto{display:inline-block;margin:2px 4px 0 0;padding:1px 7px;border:1px solid #CBD5E1;border-radius:10px;color:#1F2937;text-decoration:none}
+ #confirm{background:#FEF2F2;border:1px solid #FCA5A5;border-radius:6px;padding:8px;margin-bottom:8px}
+ .row{display:flex;gap:6px} .row button{text-align:center}
+ button.danger{background:#98002E;color:#fff;border:0}
  footer{padding:8px 14px;color:#9CA3AF;font-size:11px}
 </style></head><body>
 <header>Client-Ready · BDO formatting</header>
-<div id="draft" hidden>Brand rules are placeholders and not yet approved. Use on test decks only.</div>
+<div id="draft" hidden>Brand rules are drafted from the BDO 2023 guidelines and template, awaiting approval. Try on copies of decks first.</div>
 <section><h3>Apply to</h3>
  <select id="scope" aria-label="Apply to"><option value="all">Whole presentation</option><option value="selected">Selected slides</option></select></section>
 <section><h3>One click</h3>
- <button class="primary" id="btnTitles">Unify titles</button>
+ <button class="primary" id="btnFixAll">Fix all (safe fixes)</button>
+ <button id="btnCheck">Brand check + client-ready score</button></section>
+<section><h3>Titles</h3>
  <label for="titleCase">Title case</label>
- <select id="titleCase"><option value="none">Leave as typed</option><option value="sentence">Sentence case</option><option value="title">Title Case</option></select>
+ <select id="titleCase"><option value="sentence">Sentence case (BDO standard)</option><option value="none">Leave as typed</option><option value="title">Title Case</option></select>
+ <button id="btnTitles">Unify titles</button></section>
+<section><h3>Text</h3>
  <button id="btnBody">Make body text size consistent</button>
  <label for="fontHeading">Heading font</label><input id="fontHeading">
  <label for="fontBody">Body font</label><input id="fontBody">
  <button id="btnFont">Change fonts</button>
- <button id="btnCheck">Brand check</button></section>
-<section><h3>Result</h3><div id="log" role="status">Ready.</div></section>
+ <button id="btnTidy">Left-align justified text, remove double spaces</button></section>
+<section><h3>Colours and clean-up</h3>
+ <button id="btnColors">Snap colours to BDO palette</button>
+ <button id="btnEmpty">Remove empty text boxes…</button></section>
+<section><h3>Result</h3>
+ <div id="confirm" hidden><span id="confirmText"></span>
+  <div class="row"><button id="confirmYes" class="danger">Delete</button><button id="confirmNo">Cancel</button></div></div>
+ <div id="log" role="status">Ready.</div></section>
 <footer id="ver"></footer>
 <script src="src/rules.js"></script>
 <script src="taskpane.js"></script>

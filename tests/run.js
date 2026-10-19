@@ -89,6 +89,48 @@ test('mostCommon', () => {
   assert.strictEqual(R.mostCommon([]), null);
 });
 
+test('isTintOf recognises tints of a colour', () => {
+  assert.ok(R.isTintOf('#ADB7BF', '#5B6E7F'));  // ~50% slate
+  assert.ok(R.isTintOf('#5B6E7F', '#5B6E7F'));
+  assert.ok(!R.isTintOf('#1E90FF', '#5B6E7F'));
+  assert.ok(!R.isTintOf('#4A5A68', '#5B6E7F')); // a shade (darker), not a tint
+});
+
+test('isBrandColor: palette, allowed tints, and no tints of red/burgundy', () => {
+  assert.ok(R.isBrandColor('#e81a3b', brand.palette));
+  assert.ok(R.isBrandColor('#ADB7BF', brand.palette));
+  assert.ok(!R.isBrandColor('#F38D9D', brand.palette), 'pink tint of BDO red is not allowed');
+  assert.ok(R.isBrandColor(null, brand.palette));
+});
+
+test('snapColor fixes the colours found in real proposals', () => {
+  assert.strictEqual(R.snapColor('#ED1A3B', brand.palette), '#E81A3B'); // previous BDO red
+  assert.strictEqual(R.snapColor('#EC1A3A', brand.palette), '#E81A3B');
+  assert.strictEqual(R.snapColor('#FF0000', brand.palette), '#E81A3B'); // Office "Red"
+  assert.strictEqual(R.snapColor('#262626', brand.palette), '#333333');
+  assert.ok(R.snapColor('#002060', brand.palette));                      // Office navy → some brand colour
+  assert.strictEqual(R.snapColor('#333333', brand.palette), null);
+});
+
+test('findLeftovers catches drafting text but not normal words', () => {
+  const p = brand.leftoverPatterns;
+  assert.deepStrictEqual(R.findLeftovers('Fee of INR XX lakh, start date TBD', p), ['XX', 'TBD']);
+  assert.deepStrictEqual(R.findLeftovers('[Insert client name] DRAFT', p), ['[Insert client name]', 'DRAFT']);
+  assert.deepStrictEqual(R.findLeftovers('A draft agreement for Xbox and Max', p), []);
+});
+
+test('doubleSpaceRanges skips indentation at the start of a line', () => {
+  assert.deepStrictEqual(R.doubleSpaceRanges('a  b'), [[1, 2]]);
+  assert.deepStrictEqual(R.doubleSpaceRanges('  indented\nx   y'), [[12, 3]]);
+  assert.deepStrictEqual(R.doubleSpaceRanges('one two'), []);
+});
+
+test('normalizeFont strips theme labels', () => {
+  assert.strictEqual(R.normalizeFont('Trebuchet MS (Headings)'), 'Trebuchet MS');
+  assert.strictEqual(R.normalizeFont('+mn-lt'), null);
+  assert.strictEqual(R.normalizeFont('Aptos'), 'Aptos');
+});
+
 test('brand.json has the required keys', () => {
   ['slide', 'fonts', 'title', 'body', 'palette', 'margins', 'footer'].forEach(k => assert.ok(brand[k], 'missing ' + k));
   assert.ok(brand.fonts.allowed.indexOf(brand.fonts.heading) >= 0, 'heading font must be allowed');
