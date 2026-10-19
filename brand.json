@@ -1,0 +1,15 @@
+{
+  "version": "2026.10-0-placeholder",
+  "approved": false,
+  "note": "PLACEHOLDER VALUES. Replace from the approved study in docs/BRAND_RULES.md, then set approved to true.",
+  "slide": { "widthPt": 960, "heightPt": 540 },
+  "fonts": { "heading": "Arial", "body": "Arial", "allowed": ["Arial"] },
+  "title": { "leftPt": 36, "topPt": 28, "widthPt": 888, "heightPt": 52, "sizePt": 24, "bold": true,
+             "color": "#000000", "case": "none", "align": "Left", "tolerancePt": 4 },
+  "body": { "sizePt": 14, "minSizePt": 10, "color": "#333333", "lineSpacing": 1.0, "spaceAfterPt": 6 },
+  "palette": { "primary": ["#E81A3B"], "secondary": ["#333333"], "neutrals": ["#000000", "#FFFFFF", "#333333"] },
+  "margins": { "leftPt": 36, "rightPt": 36, "topPt": 24, "bottomPt": 30 },
+  "footer": { "sourceSizePt": 9, "requirePageNumber": true, "confidentialityText": "" },
+  "keepWords": ["BDO", "EBITDA", "M&A", "DVCS", "CXO", "INR", "USD", "KPI", "PE"],
+  "terms": []
+}
