@@ -17,11 +17,12 @@ Owner: Kushal (BDO India DVCS, not a developer). Explain changes in plain busine
 - `tests/run.js`: Node unit tests. `tests/make_test_deck.py`: builds `tests/decks/messy.pptx`.
 
 ## Status
-- Phase 1 (brand study): done. Rules drafted from the BDO 2023 guidelines + PowerPoint template; 27 proposals measured (`docs/STUDY_FINDINGS.md`). **Waiting on owner approval** of `docs/BRAND_RULES.md` (body size 12 pt, min 9 pt, house terms). `brand.json` keeps `"approved": false` until then.
+- Phase 1 (brand study): done. Rules drafted from the BDO 2023 guidelines + PowerPoint template; 27 proposals measured (`docs/STUDY_FINDINGS.md`). Owner decided: body 12 pt, flag text under 8 pt, house terms ₹ … Cr / lakh. **Waiting on owner to approve the full table** in `docs/BRAND_RULES.md`. `brand.json` keeps `"approved": false` until then.
 - Phase 2–3: built (titles, fonts, body size, brand check with score, colour snapping, tidy text, remove empty boxes with confirm, Fix all). Tested on a mocked PowerPoint only; not yet installed in real PowerPoint.
-- Hosting: Google Apps Script was requested but cannot host an Office add-in (it wraps pages in sandboxed iframes, so Office.js cannot reach PowerPoint). Waiting on owner to pick GitHub Pages (needs a public repo) or Firebase Hosting.
+- Hosting: Google Apps Script was requested but cannot host an Office add-in (it wraps pages in sandboxed iframes, so Office.js cannot reach PowerPoint). Owner chose GitHub Pages from `main` (repo must be public). Everything in the repo is therefore public: keep docs generic.
 - Proposal decks and the BDO template are confidential: analyse them only in the scratchpad, never commit them or their text. Only aggregate counts go in docs/.
 
 ## Releases
+- 0.3.0: House terms (₹ … Cr / lakh) with preview and confirm; minimum text size 8 pt; house-style issues in Brand check.
 - 0.2.0: real BDO rules (Trebuchet MS, 26 pt red sentence-case titles, palette with tint rules), Fix all, Snap colours, Tidy text, Remove empty boxes (confirm), client-ready score, leftover-draft-text check.
 - 0.1.0: skeleton, Unify titles, Change fonts (heading/body), Consistent body size, basic Brand check.

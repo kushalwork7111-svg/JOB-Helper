@@ -131,6 +131,17 @@ test('normalizeFont strips theme labels', () => {
   assert.strictEqual(R.normalizeFont('Aptos'), 'Aptos');
 });
 
+test('findTerms applies the ₹ … Cr / lakh house style', () => {
+  const apply = s => { let out = s; R.findTerms(s, brand.terms).reverse().forEach(h => { out = out.slice(0, h.start) + h.to + out.slice(h.start + h.length); }); return out; };
+  assert.strictEqual(apply('Fee of INR 5 crore'), 'Fee of ₹5 Cr');
+  assert.strictEqual(apply('Rs. 20 lakhs and Rs 3 lacs'), '₹20 lakh and ₹3 lakh');
+  assert.strictEqual(apply('Revenue (INR Cr)'), 'Revenue (₹ Cr)');
+  assert.strictEqual(apply('₹5 Crores; 12 Cr. in FY26'), '₹5 Cr; 12 Cr in FY26');
+  assert.strictEqual(apply('Total 40 Cr.'), 'Total 40 Cr.', 'full stop at the end of a sentence is kept');
+  assert.strictEqual(apply('Already ₹5 Cr and 2 lakh'), 'Already ₹5 Cr and 2 lakh');
+  assert.strictEqual(apply('Microsoft scrolls'), 'Microsoft scrolls');
+});
+
 test('brand.json has the required keys', () => {
   ['slide', 'fonts', 'title', 'body', 'palette', 'margins', 'footer'].forEach(k => assert.ok(brand[k], 'missing ' + k));
   assert.ok(brand.fonts.allowed.indexOf(brand.fonts.heading) >= 0, 'heading font must be allowed');

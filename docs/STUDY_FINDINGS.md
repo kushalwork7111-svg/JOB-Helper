@@ -16,11 +16,10 @@
 | 8 | **Justified paragraphs** (guidelines ask for left-aligned blocks) | 622 paragraphs | **Tidy text** left-aligns them |
 | 9 | **Leftover draft text** (XX, TBD, [ ], DRAFT) | 10 of 27 decks | Flagged in Brand check (needs a human to fill in) |
 | 10 | **No page numbers.** Only 73 of 584 slides carry a slide-number field. | almost every deck | Reminder in Brand check (Insert → Header & Footer) |
-| 11 | **Very small text.** 12% of text is under 9 pt, and 33% under 10 pt. | most decks | Brand check flags text under 9 pt outside the footer band |
+| 11 | **Very small text.** 12% of text is under 9 pt, and 33% under 10 pt. | most decks | Brand check flags text under 8 pt outside the footer band |
 | 12 | Hidden slides (2 decks) and speaker notes left in (8 decks) | — | Reminder in Brand check |
-| 13 | Mixed currency and unit styles (Cr / crore / Cr., INR / ₹ / Rs., lakh / lac) | across decks | Phase 4 "house terms", once you choose the house style |
+| 13 | Mixed currency and unit styles (Cr / crore / Cr., INR / ₹ / Rs., lakh / lac) | across decks | **House terms** converts to ₹ … Cr / lakh (preview, then confirm) |
 | 14 | Slide size not 16:9 widescreen | 2 decks | Not fixable from an add-in. Start from the BDO template |
-| 15 | A deck built on another firm's template | 1 deck | Brand check flags its fonts |
 
 ## What practice says about sizes
 

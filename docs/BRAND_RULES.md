@@ -7,7 +7,7 @@ Sources:
 - **T** = *BDO PowerPoint template 2023 (presentations)*, measured slide master and "text 1 column" layout
 - **P** = measured in 27 recent proposals (see `docs/STUDY_FINDINGS.md`)
 
-Where the guidelines and practice disagree, the guidelines win unless Kushal decides otherwise. The rows marked ❓ need his decision.
+Where the guidelines and practice disagree, the guidelines win unless Kushal decides otherwise. Kushal's decisions of 19 Oct 2026 are marked ✅.
 
 | Area | Rule | Value | Source |
 |---|---|---|---|
@@ -17,8 +17,8 @@ Where the guidelines and practice disagree, the guidelines win unless Kushal dec
 | Title text | Size, weight, colour, alignment | 26 pt, **not bold**, BDO red #E81A3B, left | T title style |
 | Title case | Document and page titles in sentence case. UPPER CASE only for subheadings; Title Case only by exception | Sentence case (acronyms kept) | G p.18 |
 | Subtitle line | Under the title | top 75.1 pt, 18 pt, charcoal | T |
-| Body text | Default size ❓ | **12 pt** recommended. The template default is 16 pt, but proposals use 9–12 pt | T / P |
-| Smallest text | Flag anything smaller ❓ | **9 pt** recommended (footer/source band excluded) | P |
+| Body text | Default size ✅ | **12 pt**. The template default is 16 pt, but proposals use 9–12 pt | T / P / Kushal |
+| Smallest text | Flag anything smaller ✅ | **8 pt** (footer/source band excluded) | Kushal |
 | Body colour | Charcoal is for body text | #333333 | G p.22, T |
 | Alignment | Larger blocks of text left-aligned; centre/right only for short text | Left; justified is flagged | G p.18 |
 | Primary palette | Red, Charcoal, Slate 2.0, Burgundy, Pale Charcoal | #E81A3B, #333333, #5B6E7F, #98002E, #E7E7E7 | G p.22 |
@@ -28,8 +28,8 @@ Where the guidelines and practice disagree, the guidelines win unless Kushal dec
 | Old colours | Don't keep using colours from the previous identity | #ED1A3B etc. snapped to #E81A3B | G p.37 |
 | Footer | Footer and page number | 8 pt, #ADADAD, at 511.6 pt from top | T |
 | Page numbers | Every slide except the cover | required (reminder) | T |
-| Protected words | Never changed by case conversion | BDO, EBITDA, M&A, PMI, PMO, IPO, HR, ESG, KPI… (see `brand.json`) | Kushal |
+| Protected words | Never changed by case conversion | BDO, EBITDA, M&A, PMI, PMO, IPO, HR, ESG, KPI… (see `brand.json`) | P (edit freely) |
 | Leftover draft text | Flagged | XX, TBD, TBC, [ ], [Insert…], DRAFT, lorem, "Click to add" | P |
-| House terms ❓ | Currency and units style | to be decided (e.g. "INR 5 crore" vs "₹5 Cr") | P |
+| House terms ✅ | Currency and units style | **₹ … Cr / lakh**: "INR 5 crore" → "₹5 Cr", "Rs. 20 lakhs" → "₹20 lakh", "(INR Cr)" → "(₹ Cr)" | Kushal |
 
 Approved by: ____________ Date: ____________

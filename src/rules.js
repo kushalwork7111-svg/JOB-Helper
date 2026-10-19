@@ -169,7 +169,26 @@
     return name.replace(/\s*\((Headings|Body)\)$/, '');
   }
 
-  const api = { hexToRgb, colorDistance, paletteColors, nearestColor, inPalette, isTintOf, isBrandColor, snapColor,
+  /**
+   * House-style replacements in text. terms: [{ label, find, replace, flags }].
+   * Returns non-overlapping [{ start, length, from, to, label }] sorted by position.
+   */
+  function findTerms(text, terms) {
+    const hits = [];
+    (terms || []).forEach(t => {
+      const rx = new RegExp(t.find, (t.flags || '').indexOf('g') >= 0 ? t.flags : (t.flags || '') + 'g');
+      let m;
+      while ((m = rx.exec(text))) {
+        if (!m[0].length) { rx.lastIndex++; continue; }
+        const to = t.replace.replace(/\$(\d)/g, (_, d) => m[d] || '');
+        if (to !== m[0]) hits.push({ start: m.index, length: m[0].length, from: m[0], to, label: t.label });
+      }
+    });
+    hits.sort((a, b) => a.start - b.start);
+    return hits.filter((h, i) => !hits.slice(0, i).some(p => p.start + p.length > h.start));
+  }
+
+  const api = { findTerms, hexToRgb, colorDistance, paletteColors, nearestColor, inPalette, isTintOf, isBrandColor, snapColor,
     sentenceCase, titleCase, applyCase, pickTitleIndex, offPosition, isFooterLike, mostCommon,
     findLeftovers, doubleSpaceRanges, normalizeFont };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

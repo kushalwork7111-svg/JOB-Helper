@@ -1,5 +1,5 @@
 /* global Office, PowerPoint, Rules */
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 let BRAND = null;
 const TEXT_TYPES = ['GeometricShape', 'TextBox', 'Placeholder', 'Callout'];
 
@@ -23,6 +23,7 @@ Office.onReady(async info => {
   on('btnColors', () => runPlan(planColors));
   on('btnTidy', () => runPlan(planTidyText));
   on('btnEmpty', findEmpty);
+  on('btnTerms', findTerms);
   on('btnCheck', brandCheck);
 });
 
@@ -287,17 +288,59 @@ async function deleteEmpty() {
   });
   log('Deleted ' + plural(list.length, 'empty box', 'empty boxes') + '. Press Ctrl+Z to undo.');
 }
-function showConfirm(text, onYes) {
+function showConfirm(text, onYes, yesLabel) {
   const box = document.getElementById('confirm');
   document.getElementById('confirmText').textContent = text;
+  document.getElementById('confirmYes').textContent = yesLabel || 'Delete';
   box.hidden = false;
   document.getElementById('confirmYes').onclick = async () => {
     hideConfirm();
     try { await onYes(); } catch (e) { log('Could not finish: ' + e.message); }
   };
-  document.getElementById('confirmNo').onclick = () => { hideConfirm(); pendingEmpty = []; log('Cancelled. Nothing was deleted.'); };
+  document.getElementById('confirmNo').onclick = () => { hideConfirm(); pendingEmpty = []; pendingTerms = []; log('Cancelled. Nothing was changed.'); };
 }
 function hideConfirm() { document.getElementById('confirm').hidden = true; }
+
+/* ---- House terms (₹ … Cr / lakh): preview first, change only after the user confirms ---- */
+let pendingTerms = [];
+async function findTerms() {
+  await PowerPoint.run(async ctx => {
+    const { items } = await textShapes(ctx);
+    pendingTerms = [];
+    items.forEach(x => {
+      if (!x.info.hasText) return;
+      const hits = Rules.findTerms(x.info.text, BRAND.terms);
+      if (hits.length) pendingTerms.push({ slideId: x.slide.id, shapeId: x.shape.id, index: x.index, text: x.info.text, hits });
+    });
+    const all = [].concat(...pendingTerms.map(p => p.hits.map(h => ({ index: p.index, h }))));
+    if (!all.length) return log('House terms: everything already follows the house style (₹ … Cr / lakh).');
+    const preview = all.slice(0, 20).map(a => '  Slide ' + a.index + ': "' + a.h.from + '" → "' + a.h.to + '"');
+    if (all.length > 20) preview.push('  … and ' + (all.length - 20) + ' more');
+    const slides = [...new Set(all.map(a => a.index))];
+    log(plural(all.length, 'change') + ' to the house style on slide(s) ' + slides.join(', ') + ':\n' + preview.join('\n') +
+      '\nNothing is changed until you confirm.', slides.map(n => ({ slide: n, label: String(n) })));
+    showConfirm('Apply ' + plural(all.length, 'change') + '?', applyTerms, 'Apply');
+  });
+}
+async function applyTerms() {
+  const list = pendingTerms; pendingTerms = [];
+  let n = 0, skipped = 0;
+  await PowerPoint.run(async ctx => {
+    const ranges = list.map(p => {
+      const tr = ctx.presentation.slides.getItem(p.slideId).shapes.getItem(p.shapeId).textFrame.textRange;
+      tr.load('text');
+      return { p, tr };
+    });
+    await ctx.sync();
+    ranges.forEach(({ p, tr }) => {
+      if (tr.text !== p.text) { skipped++; return; } // edited since the preview: leave it alone
+      // Work from the end so earlier positions stay valid; formatting of the rest of the text is kept.
+      p.hits.slice().reverse().forEach(h => { tr.getSubstring(h.start, h.length).text = h.to; n++; });
+    });
+    await ctx.sync();
+  });
+  log('Applied ' + plural(n, 'house-style change') + '.' + (skipped ? '\n' + plural(skipped, 'box', 'boxes') + ' changed since the preview were skipped: run it again.' : '') + '\nPress Ctrl+Z to undo.');
+}
 
 /* ---- Brand check ---- */
 async function brandCheck() {
@@ -315,6 +358,7 @@ async function brandCheck() {
       if (i.hasText && /^Justify|^Distributed/.test(i.align || '')) add(n, 'justified text (should be left aligned)');
       if (i.hasText && Rules.doubleSpaceRanges(i.text).length) add(n, 'double spaces in text');
       Rules.findLeftovers(i.text, BRAND.leftoverPatterns).forEach(m => add(n, 'leftover draft text "' + m + '"'));
+      Rules.findTerms(i.text, BRAND.terms).forEach(h => add(n, 'house style: "' + h.from + '" → "' + h.to + '"'));
       if (!i.hasText && x.shape.type === 'Placeholder') add(n, 'empty placeholder');
       if (!i.hasText && x.shape.type === 'TextBox') add(n, 'empty text box');
       if (i.autoSize === 'AutoSizeTextToFitShape') add(n, 'a box shrinks its text to fit');

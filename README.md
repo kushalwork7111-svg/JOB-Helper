@@ -9,6 +9,7 @@ A pane on the right of PowerPoint with one-click buttons:
 - **Left-align justified text, remove double spaces.**
 - **Snap colours to BDO palette**: e.g. Office red, old BDO red and navy go to the nearest BDO colour.
 - **Remove empty text boxes**: lists them first and deletes only after you confirm.
+- **House terms**: ₹ … Cr / lakh (e.g. "INR 5 crore" → "₹5 Cr"). Shows a preview and changes only after you confirm.
 
 Rules: `docs/BRAND_RULES.md`. Why these features: `docs/STUDY_FINDINGS.md` (27 real proposals measured).
 

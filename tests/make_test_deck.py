@@ -55,7 +55,7 @@ def main():
     box(s, 38, 47, 884, 28, "Commercials", 26, color="E81A3B")
     box(s, 38, 135, 300, 100, "", 12)
     box(s, 800, 200, 300, 100, "This box runs off the right edge.", 12)
-    box(s, 38, 260, 600, 40, "Professional fee: INR XX lakh, start date TBD", 12)
+    box(s, 38, 260, 600, 40, "Professional fee: INR 45 lakhs (XX crores in total), start date TBD", 12)
     box(s, 38, 515, 600, 20, "Source: synthetic test data", 8)
 
     # 5. No title at all.
