@@ -142,6 +142,46 @@ test('findTerms applies the ₹ … Cr / lakh house style', () => {
   assert.strictEqual(apply('Microsoft scrolls'), 'Microsoft scrolls');
 });
 
+test('caseOps / applyOps / mergeOps', () => {
+  const from = 'OUR UNDERSTANDING OF PMI', to = R.sentenceCase(from, brand.keepWords);
+  assert.strictEqual(R.applyOps(from, R.caseOps(from, to)), to);
+  assert.deepStrictEqual(R.mergeOps([{ start: 0, length: 3, to: 'x' }, { start: 2, length: 2, to: 'y' }, { start: 5, length: 1, to: 'z' }]).map(o => o.start), [5, 2]);
+});
+
+test('diffSegments shows deleted and inserted text with context', () => {
+  const segs = R.diffSegments('Fee of INR 5 crore', [{ start: 7, length: 4, to: '₹' }, { start: 13, length: 5, to: 'Cr' }]);
+  assert.deepStrictEqual(segs, [
+    { t: 'same', s: 'Fee of ' }, { t: 'del', s: 'INR ' }, { t: 'ins', s: '₹' }, { t: 'same', s: '5 ' },
+    { t: 'del', s: 'crore' }, { t: 'ins', s: 'Cr' }]);
+});
+
+test('findIssues reports every planted problem with an exact fix', () => {
+  const t = (id, o) => Object.assign({ id, name: 'TextBox ' + id, type: 'TextBox', isText: true, hasText: true, size: 12,
+    font: 'Trebuchet MS', color: '#333333', bold: false, align: 'Left', autoSize: 'AutoSizeNone', width: 400, height: 40 }, o);
+  const slides = [
+    { index: 1, id: 's1', shapes: [
+      t('1', { left: 60, top: 30, width: 700, text: 'OUR UNDERSTANDING OF THE PMI SCOPE', size: 22, color: '#FF0000', bold: true }),
+      t('2', { left: 38, top: 135, text: 'Body in Aptos', font: 'Aptos', size: 11 }),
+      t('3', { left: 38, top: 300, text: 'Fee:  INR 45 lakhs, TBD', color: '#002060', align: 'Justify' }),
+      t('4', { left: 38, top: 380, text: '', hasText: false }),
+      { id: '5', name: 'Rect', type: 'GeometricShape', isText: false, left: 800, top: 200, width: 300, height: 100, fill: '#C00000' }] },
+    { index: 2, id: 's2', shapes: [t('9', { left: 38, top: 300, text: 'Only body text' })] }];
+  const { issues, foreignFonts } = R.findIssues(slides, brand);
+  const codes = issues.map(i => i.slide + ':' + i.shapeId + ':' + i.code).sort();
+  assert.deepStrictEqual(codes, ['1:1:case', '1:1:titleBold', '1:1:titleColour', '1:1:titlePos', '1:1:titleSize',
+    '1:2:font', '1:3:justified', '1:3:leftover', '1:3:spaces', '1:3:term', '1:3:term', '1:3:textColour',
+    '1:4:empty', '1:5:fill', '1:5:offSlide', '2:null:noTitle'].sort());
+  assert.deepStrictEqual(foreignFonts, { Aptos: 1 });
+  const get = c => issues.find(i => i.code === c);
+  assert.strictEqual(R.applyOps(get('case').fix.text, get('case').fix.ops), 'Our understanding of the PMI scope');
+  assert.deepStrictEqual(get('titlePos').fix.box, { left: 38.3, top: 46.8, width: 883.7, height: 28.4 });
+  assert.strictEqual(get('fill').to, '#98002E');
+  assert.strictEqual(get('offSlide').fix.left, 660);
+  assert.ok(get('empty').destructive && !get('empty').safe);
+  assert.ok(get('term').fix && !get('term').safe, 'house terms are applied on request, not by Fix all');
+  assert.ok(!get('leftover').fix, 'draft text needs a person');
+});
+
 test('brand.json has the required keys', () => {
   ['slide', 'fonts', 'title', 'body', 'palette', 'margins', 'footer'].forEach(k => assert.ok(brand[k], 'missing ' + k));
   assert.ok(brand.fonts.allowed.indexOf(brand.fonts.heading) >= 0, 'heading font must be allowed');
