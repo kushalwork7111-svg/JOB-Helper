@@ -1,118 +1,365 @@
 <!DOCTYPE html>
-<html><head><base target="_top"><meta charset="utf-8">
+<html lang="en"><head><base target="_top"><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
- :root{--ink:#111827;--muted:#6B7280;--line:#E5E7EB;--bg:#F3F4F6;--accent:#1D4ED8}
- body{margin:0;font:14px/1.45 Arial,sans-serif;background:var(--bg);color:var(--ink)}
- header{background:#0F172A;color:#fff;padding:14px 16px;font-weight:bold}
- main{max-width:1100px;margin:0 auto;padding:16px}
- .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px} input,select{padding:8px;border:1px solid var(--line);border-radius:8px}
- .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
- .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
- .score{font-weight:bold} .muted{color:var(--muted);font-size:12px}
- .plan{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0} .plan td,.plan th{border-bottom:1px solid var(--line);padding:6px;text-align:left;vertical-align:top;word-break:break-word}
- details.card summary{cursor:pointer;font-weight:bold} .set{display:grid;grid-template-columns:minmax(160px,1fr) 2fr;gap:8px 12px;align-items:center;margin:8px 0}
- .set input,.set select{width:100%;box-sizing:border-box} .set h4{grid-column:1/-1;margin:10px 0 0} .err{color:#B91C1C;font-size:13px}
- @media (max-width:560px){.set{grid-template-columns:1fr}}
- .warn{background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px;font-size:13px}
- #gate{max-width:360px;margin:40px auto;text-align:center} #gate input{font-size:22px;letter-spacing:6px;text-align:center;width:100%;box-sizing:border-box;margin:12px 0}
- .hidden{display:none!important}
- button{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer} button.primary{background:var(--accent);color:#fff;border:0}
+:root{--bg:#F5F6FA;--card:#fff;--ink:#0F172A;--ink2:#334155;--muted:#64748B;--line:#E2E8F0;--soft:#F8FAFC;
+ --accent:#4F46E5;--accent2:#4338CA;--accentSoft:#EEF2FF;--good:#059669;--goodSoft:#ECFDF5;--warn:#B45309;--warnSoft:#FFFBEB;
+ --bad:#DC2626;--badSoft:#FEF2F2;--stretch:#64748B;--stretchSoft:#F1F5F9;--r:14px;--shadow:0 1px 2px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.05)}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+h1,h2,h3,h4{margin:0;line-height:1.25} h1{font-size:22px;font-weight:700} h2{font-size:16px;font-weight:600} h3{font-size:15px;font-weight:600}
+.muted{color:var(--muted)} .small{font-size:12px} .hidden{display:none!important}
+input,select,textarea{font:inherit;color:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accentSoft);border-color:var(--accent)}
+textarea{resize:vertical;min-height:70px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink2);font-weight:500;cursor:pointer;white-space:nowrap;font-size:13px}
+.btn:hover{background:var(--soft);text-decoration:none} .btn:disabled{opacity:.55;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff} .btn.primary:hover{background:var(--accent2)}
+.btn.ghost{border-color:transparent;background:transparent} .btn.ghost:hover{background:var(--soft)}
+.btn.icon{padding:7px;width:34px;height:34px} .btn.good{color:var(--good);border-color:#A7F3D0;background:var(--goodSoft)}
+.btn.danger{color:var(--bad)} .btn svg{width:16px;height:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:500;background:var(--stretchSoft);color:var(--ink2);white-space:nowrap}
+.chip.Strong{background:var(--goodSoft);color:var(--good)} .chip.Good{background:var(--warnSoft);color:var(--warn)} .chip.Stretch{background:var(--stretchSoft);color:var(--stretch)}
+.chip.ok{background:var(--goodSoft);color:var(--good)} .chip.miss{background:#fff;border:1px dashed var(--line);color:var(--muted)}
+.chip.st-Shortlisted{background:var(--accentSoft);color:var(--accent)} .chip.st-Applied,.chip.st-Offer{background:var(--goodSoft);color:var(--good)}
+.chip.st-Interviewing{background:#F0F9FF;color:#0369A1} .chip.st-Rejected,.chip.st-Withdrawn{background:var(--badSoft);color:var(--bad)}
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;line-height:1.15} .brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#6366F1,#4338CA);display:grid;place-items:center;color:#fff}
+.brand .mark svg{width:17px;height:17px} .brand small{font-weight:500;color:var(--muted);font-size:11px}
+.tabs{display:flex;gap:4px;margin-left:12px;flex:1} .tab{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:9px;color:var(--muted);font-weight:500;cursor:pointer;border:0;background:none;font-size:13.5px;position:relative}
+.tab svg{width:17px;height:17px;flex:none} .tab span{white-space:nowrap} .tab:hover{background:var(--soft);color:var(--ink)} .tab.on{background:var(--accentSoft);color:var(--accent)}
+.tab .badge{background:var(--accent);color:#fff;border-radius:999px;font-size:10.5px;padding:0 6px;line-height:17px}
+.spacer{flex:1}
+main{max-width:1120px;margin:0 auto;padding:22px 16px 90px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+/* overview */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.stat{padding:14px 16px} .stat b{display:block;font-size:26px;font-weight:700;letter-spacing:-.5px} .stat span{color:var(--muted);font-size:12.5px}
+.cols{display:grid;grid-template-columns:1.6fr 1fr;gap:16px} .cols>*,.stack>*{min-width:0} .stack{display:flex;flex-direction:column;gap:16px}
+.list-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer} .list-row:first-of-type{border-top:0}
+.list-row .grow{flex:1;min-width:0} .list-row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)} .kv:first-of-type{border-top:0} .kv span:first-child{color:var(--muted)} .kv span:last-child{text-align:right}
+.check{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)} .check:first-of-type{border-top:0}
+.dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:13px;font-weight:700}
+.dot.done{background:var(--goodSoft);color:var(--good)} .dot.todo{background:var(--stretchSoft);color:var(--muted)}
+.banner{display:flex;gap:12px;align-items:center;padding:12px 16px;border-radius:12px;background:var(--warnSoft);color:var(--warn);margin-bottom:16px;border:1px solid #FDE68A} .banner svg{width:18px;height:18px}
+/* jobs */
+.filters{display:grid;grid-template-columns:2fr repeat(4,1fr) 1.4fr;gap:10px;margin-bottom:12px;align-items:end}
+.filters label{font-size:11.5px;color:var(--muted);font-weight:500;display:block;margin-bottom:4px}
+.range{display:flex;align-items:center;gap:8px} .range input[type=range]{padding:0;accent-color:var(--accent);border:0} .range output{font-weight:600;min-width:22px;text-align:right}
+.jobs{display:flex;flex-direction:column;gap:12px}
+.job{display:grid;grid-template-columns:62px 1fr auto;gap:16px;align-items:start;cursor:pointer;transition:border-color .15s}
+.job:hover{border-color:#C7D2FE} .job.dim{opacity:.6}
+.ring{--p:0;--c:var(--stretch);width:58px;height:58px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),#EEF0F4 0);display:grid;place-items:center;flex:none}
+.ring span{width:46px;height:46px;border-radius:50%;background:#fff;display:grid;place-items:center;font-weight:700;font-size:16px}
+.ring.Strong{--c:var(--good)} .ring.Good{--c:#F59E0B}
+.list-row .ring{width:44px;height:44px} .list-row .ring span{width:34px;height:34px;font-size:13px}
+.job h3{margin:6px 0 1px} .job .co{color:var(--ink2);font-weight:500} .meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:12.5px;margin-top:6px}
+.meta span{display:inline-flex;align-items:center;gap:5px} .meta svg{width:14px;height:14px}
+.bars{display:flex;gap:6px;margin-top:10px;max-width:440px} .bar{flex:1} .bar i{display:block;height:5px;border-radius:3px;background:#EEF0F4;overflow:hidden}
+.bar i b{display:block;height:100%;background:var(--accent);border-radius:3px} .bar small{font-size:10.5px;color:var(--muted)}
+.job-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:140px}
+.job-actions .row{display:flex;gap:6px;justify-content:flex-end}
+.empty{text-align:center;padding:48px 20px;color:var(--muted)} .empty svg{width:40px;height:40px;color:#CBD5E1;margin-bottom:8px}
+/* modal + toast */
+.scrim{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;animation:fade .15s}
+.modal{background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(15,23,42,.25)}
+.modal.small{max-width:440px} .modal-h{padding:18px 20px 0;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.modal-b{padding:14px 20px} .modal-f{padding:12px 20px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--line)}
+.desc{white-space:pre-wrap;color:var(--ink2);background:var(--soft);border-radius:10px;padding:12px;max-height:260px;overflow:auto;font-size:13px}
+.sec{margin-top:16px} .sec h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.brk{display:grid;grid-template-columns:90px 1fr 46px;gap:8px;align-items:center;font-size:12.5px;margin:5px 0}
+.brk i{height:7px;border-radius:4px;background:#EEF0F4;overflow:hidden;display:block} .brk i b{display:block;height:100%;background:var(--accent)}
+.toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);font-size:13px;animation:up .2s}
+.toast.err{background:var(--bad)}
+@keyframes fade{from{opacity:0}} @keyframes up{from{transform:translateY(8px);opacity:0}}
+/* applications */
+.apps{display:flex;flex-direction:column;gap:12px}
+.app-grid{display:grid;grid-template-columns:1fr 1fr 1.8fr auto;gap:10px;align-items:end;margin-top:12px}
+.app-grid label{font-size:11.5px;color:var(--muted);font-weight:500;display:block;margin-bottom:4px}
+.due{color:var(--bad);font-weight:600}
+/* cv + settings */
+.drop{display:block;border:2px dashed #C7D2FE;background:var(--accentSoft);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:background .15s}
+.drop.over{background:#E0E7FF} .drop svg{width:30px;height:30px;color:var(--accent)}
+.plan{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0} .plan td,.plan th{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top;word-break:break-word}
+.plan th{color:var(--muted);font-weight:500;font-size:12px}
+.warn{background:var(--warnSoft);border:1px solid #FDE68A;color:#92400E;border-radius:10px;padding:10px 12px;font-size:13px;margin:10px 0}
+.set{display:grid;grid-template-columns:minmax(200px,1fr) 2fr;gap:10px 16px;align-items:center}
+.set h4{grid-column:1/-1;margin:14px 0 2px;font-size:13px;color:var(--accent)} .set h4:first-child{margin-top:0}
+.err{color:var(--bad);font-size:13px}
+/* gate */
+#gate{min-height:100vh;display:grid;place-items:center;padding:16px}
+#gate .card{max-width:380px;width:100%;text-align:center;padding:28px}
+#gate input{text-align:center;font-size:22px;letter-spacing:8px;margin:8px 0} #gate #setupCode{font-size:15px;letter-spacing:2px}
+/* phones */
+.bottom{display:none}
+@media (max-width:860px){
+ .tabs{display:none} .bottom{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+ .bottom .tab{flex:1;flex-direction:column;gap:2px;font-size:10.5px;padding:6px 2px} .bottom .tab .badge{position:absolute;top:2px;left:calc(50% + 6px)}
+ .top .btn span{display:none}
+ .stats{grid-template-columns:repeat(2,1fr)} .stats .stat:first-child{grid-column:1/-1}
+ .cols{grid-template-columns:1fr} .filters{grid-template-columns:1fr 1fr} .filters .f-q,.filters .f-r{grid-column:1/-1}
+ .job{grid-template-columns:50px 1fr;gap:12px} .job>.ring{width:48px;height:48px} .job>.ring span{width:38px;height:38px;font-size:14px}
+ .job-actions{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;min-width:0} .job-actions .row{justify-content:flex-start}
+ .job-actions>.btn,.job-actions>.chip{flex:1}
+ .app-grid{grid-template-columns:1fr 1fr} .app-grid .wide{grid-column:1/-1}
+ .set{grid-template-columns:1fr} .modal{max-height:92vh}
+ main{padding-top:16px}
+}
 </style></head><body>
-<header>Job Finder <span class="muted" style="color:#94A3B8">v<?= version ?></span></header>
-<section id="gate" class="card">
- <b id="gateTitle">Enter your PIN</b>
- <div class="muted" id="gateHelp"></div>
- <input id="setupCode" class="hidden" placeholder="One-time setup code" autocomplete="off" style="font-size:16px;letter-spacing:2px">
- <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" onkeydown="if(event.key==='Enter')gateGo()">
- <button class="primary" onclick="gateGo()" id="gateBtn">Unlock</button>
- <div id="gateMsg" class="err"></div>
+
+<section id="gate">
+ <div class="card">
+  <div class="brand" style="justify-content:center;margin-bottom:14px"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>Job Finder</div>
+  <h2 id="gateTitle">Enter your PIN</h2>
+  <p class="muted small" id="gateHelp" style="margin:6px 0 10px"></p>
+  <input id="setupCode" class="hidden" placeholder="One-time setup code" autocomplete="off">
+  <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="••••" onkeydown="if(event.key==='Enter')gateGo()">
+  <button class="btn primary" style="width:100%;margin-top:6px;padding:11px" onclick="gateGo()" id="gateBtn">Unlock</button>
+  <div id="gateMsg" class="err" style="margin-top:10px"></div>
+ </div>
 </section>
-<main id="app" class="hidden">
- <details class="card" style="margin-bottom:12px" id="settingsBox" ontoggle="if(this.open&&!SETTINGS.length)loadSettings()">
-  <summary>Settings</summary>
-  <div class="muted">Where alerts go, what to look for and how jobs are scored. Changes apply from the next check (within 5 minutes).</div>
-  <div class="set" id="setForm">Loading…</div>
-  <div class="bar"><button class="primary" onclick="saveSet()">Save settings</button><button onclick="testMail()">Send me a test alert</button></div>
-  <div id="setMsg"></div>
-  <h4>Change PIN</h4>
-  <div class="bar"><input id="oldPin" type="password" inputmode="numeric" placeholder="Current PIN"><input id="newPin" type="password" inputmode="numeric" placeholder="New PIN (4–12 digits)"><button onclick="changePinNow()">Change PIN</button><button onclick="lockNow()">Lock this page</button></div>
- </details>
- <section class="card" style="margin-bottom:12px">
-  <b>My CV</b>
-  <div class="muted">Upload your CV (Word, PDF or text, any layout). The app reads it and sets itself up from it. Nothing is saved until you click "Use this CV".</div>
-  <div class="bar"><input type="file" id="cvfile" accept=".docx,.doc,.pdf,.txt,.rtf,.odt"><button onclick="uploadCv()">Read my CV</button></div>
-  <div id="cvout"></div>
- </section>
- <div class="bar"><input id="q" placeholder="Search title or company" oninput="paint()"><select id="st" onchange="paint()"><option value="">All statuses</option><option>New</option><option>Shortlisted</option><option>Tailored</option><option>Applied</option></select></div>
- <div class="grid" id="grid">Loading…</div>
-</main>
+
+<div id="app" class="hidden">
+ <header class="top"><div class="top-in">
+  <div class="brand"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><div>Job Finder<br><small>v<?= version ?></small></div></div>
+  <nav class="tabs" id="tabsTop"></nav><div class="spacer"></div>
+  <button class="btn ghost icon" onclick="refresh(true)" title="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg></button>
+  <button class="btn" onclick="lockNow()" title="Lock this page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Lock</span></button>
+ </div></header>
+ <main id="view"></main>
+ <nav class="bottom" id="tabsBottom"></nav>
+</div>
+<div class="toasts" id="toasts"></div>
+
 <script>
-let JOBS=[],TOKEN='',GATE={};
-try{TOKEN=sessionStorage.getItem('jf')||''}catch(e){}
-/** Calls the server with the unlock token; a missing/expired unlock shows the PIN screen again. */
-function api(fn,args,ok,fail){google.script.run.withSuccessHandler(ok||(()=>{})).withFailureHandler(e=>{
-  if(/NEEDS_PIN/.test(e.message)){TOKEN='';try{sessionStorage.removeItem('jf')}catch(x){}showGate()}else(fail||(x=>alert(x.message)))(e)})[fn](TOKEN,...args)}
-function showGate(){document.getElementById('app').classList.add('hidden');document.getElementById('gate').classList.remove('hidden');
- google.script.run.withSuccessHandler(st=>{GATE=st;const t=document.getElementById('gateTitle'),h=document.getElementById('gateHelp'),b=document.getElementById('gateBtn');
-  if(st.canCreate){t.textContent='Create your PIN';h.textContent=(st.needsSetupCode?'Enter the one-time setup code, then choose a PIN. ':'')+'PIN: 4 to 12 digits. Longer is safer; avoid numbers from your email or phone.';b.textContent='Create PIN';
-   document.getElementById('setupCode').classList.toggle('hidden',!st.needsSetupCode)}
+/* ---------- basics ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const IC={
+ home:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>',
+ jobs:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>',
+ apps:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+ cv:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+ pin:'<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/>',
+ x:'<path d="M18 6 6 18M6 6l12 12"/>', ext:'<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+ brief:'<path d="M4 7h16v12H4zM9 7V5h6v2"/>', cash:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+ up:'<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>', search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', check:'<path d="M5 12l5 5 9-10"/>'
+};
+const ic=(n,fill)=>'<svg viewBox="0 0 24 24" fill="'+(fill?'currentColor':'none')+'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+IC[n]+'</svg>';
+function toast(m,err){const t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=m;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),err?6000:3500)}
+/** Small promise-based dialog. Resolves with the clicked action's value (or null when closed). */
+function modal({title,body,actions,size}){return new Promise(res=>{const s=document.createElement('div');s.className='scrim';
+ s.innerHTML='<div class="modal '+(size||'small')+'"><div class="modal-h"><div>'+title+'</div><button class="btn ghost icon" data-v="__x">'+ic('x')+'</button></div><div class="modal-b">'+(body||'')+'</div>'+
+ (actions&&actions.length?'<div class="modal-f">'+actions.map((a,i)=>'<button class="btn '+(a.cls||'')+'" data-i="'+i+'">'+a.label+'</button>').join('')+'</div>':'')+'</div>';
+ const close=v=>{s.remove();document.removeEventListener('keydown',key);res(v)};const key=e=>{if(e.key==='Escape')close(null)};document.addEventListener('keydown',key);
+ s.addEventListener('click',e=>{if(e.target===s)return close(null);const b=e.target.closest('button');if(!b)return;if(b.dataset.v==='__x')return close(null);
+  if(b.dataset.i!=null){const a=actions[+b.dataset.i];close(a.read?a.read(s):a.value!==undefined?a.value:true)}});
+ document.body.appendChild(s);const f=s.querySelector('textarea,input');if(f)f.focus()})}
+const confirmBox=(title,text,ok)=>modal({title:'<h2>'+title+'</h2>',body:'<p class="muted" style="margin:0">'+text+'</p>',actions:[{label:'Cancel',value:false},{label:ok||'OK',cls:'primary',value:true}]});
+
+/* ---------- server bridge (every call carries the PIN unlock) ---------- */
+let TOKEN='',GATE={},D=null,TAB='overview';
+try{TOKEN=sessionStorage.getItem('jf')||'';TAB=sessionStorage.getItem('jfTab')||'overview'}catch(e){}
+function call(fn,...args){return new Promise((ok,no)=>google.script.run.withSuccessHandler(ok).withFailureHandler(e=>{
+ if(/NEEDS_PIN/.test(e.message)){TOKEN='';try{sessionStorage.removeItem('jf')}catch(x){}showGate();no(new Error('Please unlock again'))}else no(e)})[fn](TOKEN,...args))}
+const fail=e=>toast(e.message||String(e),true);
+
+/* ---------- PIN screen ---------- */
+function showGate(){$('#app').classList.add('hidden');$('#gate').classList.remove('hidden');
+ google.script.run.withSuccessHandler(st=>{GATE=st;const t=$('#gateTitle'),h=$('#gateHelp'),b=$('#gateBtn');
+  if(st.canCreate){t.textContent='Create your PIN';h.textContent=(st.needsSetupCode?'Enter your one-time setup code, then choose a PIN. ':'')+'4–12 digits. Longer is safer; avoid numbers from your email or phone.';b.textContent='Create PIN';$('#setupCode').classList.toggle('hidden',!st.needsSetupCode)}
   else if(!st.hasPin){t.textContent='Not set up yet';h.textContent='The owner has not created a PIN yet.';b.disabled=true}
-  else{t.textContent='Enter your PIN';h.textContent=st.lockedMinutes?'Locked for '+st.lockedMinutes+' more minutes after wrong PINs.':''}}).pinStatus()}
-function gateGo(){const pin=document.getElementById('pin').value,m=document.getElementById('gateMsg');m.textContent='';
- const done=r=>{if(r.ok){TOKEN=r.token;try{sessionStorage.setItem('jf',TOKEN)}catch(e){}document.getElementById('pin').value='';openApp()}else m.textContent=r.message};
+  else{t.textContent='Enter your PIN';h.textContent=st.lockedMinutes?'Locked for '+st.lockedMinutes+' more minutes after wrong PINs.':'This page is private to its owner.'}
+  $('#pin').focus()}).pinStatus()}
+function gateGo(){const pin=$('#pin').value,m=$('#gateMsg');m.textContent='';
+ const done=r=>{if(r.ok){TOKEN=r.token;try{sessionStorage.setItem('jf',TOKEN)}catch(e){}$('#pin').value='';openApp()}else m.textContent=r.message};
  const err=e=>m.textContent=e.message;
- if(GATE.canCreate){if(!/^\d{4,12}$/.test(pin)){m.textContent='Use 4 to 12 digits.';return}if(prompt('Type the same PIN again to confirm')!==pin){m.textContent='The two PINs did not match.';return}
-  google.script.run.withSuccessHandler(done).withFailureHandler(err).createPin(pin,document.getElementById('setupCode').value)}
+ if(GATE.canCreate){if(!/^\d{4,12}$/.test(pin)){m.textContent='Use 4 to 12 digits.';return}
+  modal({title:'<h2>Confirm your PIN</h2>',body:'<input id="pin2" type="password" inputmode="numeric" placeholder="Type the same PIN again">',actions:[{label:'Cancel',value:null},{label:'Create PIN',cls:'primary',read:s=>s.querySelector('#pin2').value}]})
+   .then(v=>{if(v==null)return;if(v!==pin){m.textContent='The two PINs did not match.';return}google.script.run.withSuccessHandler(done).withFailureHandler(err).createPin(pin,$('#setupCode').value)})}
  else google.script.run.withSuccessHandler(done).withFailureHandler(err).unlock(pin)}
-function openApp(){document.getElementById('gate').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load()}
-function lockNow(){TOKEN='';try{sessionStorage.removeItem('jf')}catch(e){}showGate()}
-function changePinNow(){const o=document.getElementById('oldPin').value,n=document.getElementById('newPin').value;
- if(!/^\d{4,12}$/.test(n)){alert('New PIN: use 4 to 12 digits.');return}
- if(prompt('Type the new PIN again to confirm')!==n){alert('The two PINs did not match.');return}
- api('changePin',[o,n],()=>{document.getElementById('oldPin').value=document.getElementById('newPin').value='';alert('PIN changed.')})}
-const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function load(){api('getJobs',[],j=>{JOBS=j;paint()})}
-function paint(){const q=document.getElementById('q').value.toLowerCase(),st=document.getElementById('st').value;
- document.getElementById('grid').innerHTML=JOBS.filter(j=>(!q||(j.title+' '+j.company).toLowerCase().includes(q))&&(!st||j.status===st)).map(j=>
- '<div class="card"><div class="score">Fit '+j.score+'</div><b>'+esc(j.title)+'</b><div>'+esc(j.company)+' · '+esc(j.location)+'</div>'+
- '<div class="muted">'+esc(j.breakdown)+'</div><div class="muted">'+esc(j.exp)+' · '+esc(j.salary||'Salary not stated')+' · '+esc(j.status)+'</div>'+
- '<div class="bar"><button data-id="'+esc(j.id)+'" onclick="tailor(this.dataset.id)">Tailor my CV</button><button class="primary" data-id="'+esc(j.id)+'" onclick="apply(this.dataset.id)">Apply</button>'+
- (j.url?'<a href="'+esc(j.url)+'" target="_blank" rel="noopener">Posting</a>':'')+'</div></div>').join('')||'No jobs yet.'}
-function tailor(id){const note=prompt('Anything to stress for this job? (optional)')||'';api('requestTailor',[id,note],()=>alert('Requested. The tailored CV arrives by email within a few minutes.'))}
-function apply(id,ok){api('applyJob',[id,!!ok],r=>{
- if(r.open){window.open(r.open,'_blank');alert(r.note)}else if(r.needTailor){alert('Tailor your CV for this job first.')}
- else if(r.confirm){if(confirm(r.confirm))apply(id,true)}else if(r.sent){alert('Application sent.');load()}})}
+function openApp(){$('#gate').classList.add('hidden');$('#app').classList.remove('hidden');renderTabs();$('#view').innerHTML='<div class="empty">Loading your dashboard…</div>';refresh()}
+function lockNow(){TOKEN='';try{sessionStorage.removeItem('jf')}catch(e){}D=null;showGate()}
+
+/* ---------- navigation ---------- */
+const TABS=[['overview','Overview','home'],['jobs','Jobs','jobs'],['apps','Applications','apps'],['cv','My CV','cv'],['settings','Settings','gear']];
+function renderTabs(){const badge=k=>{if(!D)return'';const n=k==='jobs'?newMatches().length:k==='apps'?D.applications.filter(a=>a.due).length:0;return n?'<span class="badge">'+n+'</span>':''};
+ const html=TABS.map(([k,l,i])=>'<button class="tab'+(TAB===k?' on':'')+'" onclick="go(\''+k+'\')">'+ic(i)+'<span>'+l+'</span>'+badge(k)+'</button>').join('');
+ $('#tabsTop').innerHTML=html;$('#tabsBottom').innerHTML=html}
+function go(k){TAB=k;try{sessionStorage.setItem('jfTab',k)}catch(e){}renderTabs();render();window.scrollTo(0,0)}
+function refresh(manual){return call('getDashboard').then(d=>{D=d;renderTabs();render();if(manual)toast('Up to date')}).catch(fail)}
+function render(){if(!D)return;({overview:renderOverview,jobs:renderJobs,apps:renderApps,cv:renderCv,settings:renderSettings}[TAB]||renderOverview)()}
+
+/* ---------- shared bits ---------- */
+const newMatches=()=>D.jobs.filter(j=>j.status==='New'&&j.scored&&j.score>=D.health.minScore);
+const ago=n=>n==null?'':n===0?'today':n===1?'yesterday':n+' days ago';
+const firstName=()=>(D.profile.name||'').split(' ')[0];
+function greet(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening'}
+function ring(j,big){return '<div class="ring '+j.band+'" style="--p:'+(j.scored?j.score:0)+(big?';width:70px;height:70px':'')+'"><span'+(big?' style="width:56px;height:56px;font-size:19px"':'')+'>'+(j.scored?j.score:'–')+'</span></div>'}
+function tailorBtn(j){const t=j.tailor;
+ if(t&&t.status==='QUEUED')return '<button class="btn" disabled>'+ic('clock')+'Tailoring…</button>';
+ if(t&&t.docUrl)return '<a class="btn good" href="'+esc(t.docUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+ic('check')+'CV ready</a>';
+ if(t&&t.status==='FAILED')return '<button class="btn danger" data-act="tailor" title="'+esc(t.note)+'">Tailor failed · retry</button>';
+ return '<button class="btn" data-act="tailor">'+ic('cv')+'Tailor CV</button>'}
+function applyBtn(j){return j.status==='Applied'?'<span class="chip st-Applied" style="justify-content:center;padding:7px">'+ic('check')+' Applied</span>':'<button class="btn primary" data-act="apply">'+ic('apps')+'Apply</button>'}
+
+/* ---------- overview ---------- */
+function renderOverview(){const h=D.health,jobs=D.jobs,apps=D.applications,fresh=newMatches();
+ const steps=[[h.hasCv,'Upload your CV','The app reads it and fills in your profile.','cv'],[h.hasEmail,'Choose where alerts go','Your email for new-job alerts.','settings'],[h.hasRuns,'Connect Gemini\'s daily search','Gemini looks for jobs every morning and saves them here. This is the next setup step.','']];
+ const todo=steps.filter(s=>!s[0]).length;
+ const stat=(n,l,k)=>'<div class="card stat" style="cursor:pointer" onclick="'+k+'"><b>'+n+'</b><span>'+l+'</span></div>';
+ $('#view').innerHTML=
+ '<div class="page-head"><div><h1>'+greet()+(firstName()?', '+esc(firstName()):'')+'</h1><div class="muted">'+(fresh.length?fresh.length+' new job'+(fresh.length>1?'s':'')+' worth a look.':'You\'re all caught up.')+'</div></div></div>'+
+ (h.paused?'<div class="banner">'+ic('clock')+'<div>Job alerts are paused. <a href="#" onclick="go(\'settings\');return false">Turn them back on</a></div></div>':'')+
+ (todo?'<div class="card" style="margin-bottom:16px"><h2>Finish setting up <span class="muted small">('+(3-todo)+' of 3 done)</span></h2><div style="margin-top:8px">'+steps.map((s,i)=>'<div class="check"><div class="dot '+(s[0]?'done':'todo')+'">'+(s[0]?'✓':i+1)+'</div><div style="flex:1"><b>'+s[1]+'</b><div class="muted small">'+s[2]+'</div></div>'+(!s[0]&&s[3]?'<button class="btn" onclick="go(\''+s[3]+'\')">Do it</button>':'')+'</div>').join('')+'</div></div>':'')+
+ '<div class="stats">'+stat(fresh.length,'New matches to review',"go('jobs')")+stat(jobs.filter(j=>j.band==='Strong'&&j.scored&&j.status!=='Not interested').length,'Strong matches',"go('jobs')")+
+  stat(jobs.filter(j=>j.status==='Shortlisted').length,'Shortlisted',"JF.status='Shortlisted';go('jobs')")+stat(apps.length,'Applications',"go('apps')")+stat(apps.filter(a=>a.status==='Interviewing'||a.status==='Offer').length,'Interviews & offers',"go('apps')")+'</div>'+
+ '<div class="cols"><div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Top matches</h2><a href="#" onclick="go(\'jobs\');return false">See all</a></div><div style="margin-top:8px" id="topList">'+
+  (jobs.filter(j=>j.scored&&['New','Shortlisted'].includes(j.status)).slice(0,6).map(j=>'<div class="list-row" data-id="'+esc(j.id)+'">'+ring(j)+'<div class="grow"><div class="t">'+esc(j.title)+'</div><div class="muted small">'+esc(j.company)+' · '+esc(j.location)+(j.age!=null?' · '+ago(j.age):'')+'</div></div><span class="chip '+j.band+'">'+j.band+'</span></div>').join('')||'<div class="empty" style="padding:24px">'+ic('search')+'<div>No jobs yet. They appear here after the first daily search.</div></div>')+
+ '</div></div><div class="stack"><div class="card"><h2>Status</h2><div style="margin-top:8px">'+
+  '<div class="kv"><span>Last search</span><span>'+(h.lastRun?esc(h.lastRun.when)+'<br><span class="muted small">'+esc(h.lastRun.found)+' found, '+esc(h.lastRun.fresh)+' new</span>':'Not yet')+'</span></div>'+
+  '<div class="kv"><span>Job alerts</span><span>'+(h.paused?'Paused':h.hasEmail?'On, from score '+h.minScore:'No email set')+'</span></div>'+
+  '<div class="kv"><span>Last alert email</span><span>'+(esc(h.lastAlert)||'None yet')+'</span></div>'+
+  '<div class="kv"><span>CVs being tailored</span><span>'+h.waitingTailor+'</span></div></div></div>'+
+  '<div class="card"><h2>Follow-ups due</h2><div style="margin-top:8px">'+(apps.filter(a=>a.due).map(a=>'<div class="list-row" onclick="go(\'apps\')"><div class="grow"><div class="t">'+esc(a.title)+'</div><div class="muted small">'+esc(a.company)+' · due '+esc(a.followUp)+'</div></div><span class="chip st-'+esc(a.status)+'">'+esc(a.status)+'</span></div>').join('')||'<div class="muted">Nothing due.</div>')+'</div></div></div></div>';
+ $('#topList').onclick=e=>{const r=e.target.closest('[data-id]');if(r)openJob(r.dataset.id)}}
+
+/* ---------- jobs ---------- */
+const JF={q:'',min:0,status:'active',city:'',source:'',mode:'',sort:'score'};
+function renderJobs(){const jobs=D.jobs,opts=k=>[...new Set(jobs.map(j=>String(j[k]||'').trim()).filter(Boolean))].sort();
+ const sel=(id,label,val,list,all)=>'<div><label>'+label+'</label><select id="'+id+'"><option value="">'+all+'</option>'+list.map(o=>'<option'+(o===val?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select></div>';
+ $('#view').innerHTML='<div class="page-head"><div><h1>Jobs</h1><div class="muted" id="jobCount"></div></div></div>'+
+ '<div class="card filters"><div class="f-q"><label>Search</label><input id="fq" placeholder="Title, company or skill" value="'+esc(JF.q)+'"></div>'+
+  '<div><label>Status</label><select id="fs"><option value="active"'+(JF.status==='active'?' selected':'')+'>To review</option><option value=""'+(JF.status===''?' selected':'')+'>All</option>'+D.jobStatuses.map(s=>'<option'+(JF.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
+  sel('fc','City',JF.city,opts('location'),'Any city')+sel('fo','Source',JF.source,opts('source'),'Any source')+sel('fm','Work mode',JF.mode,opts('mode'),'Any mode')+
+  '<div class="f-r"><label>Min score · sort</label><div class="range"><input type="range" id="fmin" min="0" max="100" step="5" value="'+JF.min+'"><output id="fminv">'+JF.min+'</output><select id="fsort" style="width:auto"><option value="score">Best</option><option value="new"'+(JF.sort==='new'?' selected':'')+'>Newest</option></select></div></div></div>'+
+ '<div class="jobs" id="jobList"></div>';
+ const bind=(id,k,ev)=>$(id).addEventListener(ev||'change',e=>{JF[k]=k==='min'?+e.target.value:e.target.value;if(k==='min')$('#fminv').textContent=JF.min;paintJobs()});
+ bind('#fq','q','input');bind('#fs','status');bind('#fc','city');bind('#fo','source');bind('#fm','mode');bind('#fmin','min','input');bind('#fsort','sort');
+ $('#jobList').onclick=jobClick;paintJobs()}
+function paintJobs(){const q=JF.q.toLowerCase();
+ let list=D.jobs.filter(j=>(JF.status==='active'?['New','Shortlisted','Tailored'].includes(j.status):!JF.status||j.status===JF.status)&&
+  (!q||[j.title,j.company,j.location].concat(j.must.map(m=>m.t)).join(' ').toLowerCase().includes(q))&&
+  (!JF.city||j.location===JF.city)&&(!JF.source||j.source===JF.source)&&(!JF.mode||j.mode===JF.mode)&&(j.score>=JF.min));
+ if(JF.sort==='new')list=list.slice().sort((a,b)=>(a.age==null?999:a.age)-(b.age==null?999:b.age));
+ $('#jobCount').textContent=list.length+' of '+D.jobs.length+' jobs';
+ $('#jobList').innerHTML=list.map(j=>'<article class="card job'+(j.status==='Not interested'?' dim':'')+'" data-id="'+esc(j.id)+'">'+ring(j)+
+  '<div style="min-width:0"><div class="chips"><span class="chip '+j.band+'">'+(j.scored?j.band:'Scoring…')+'</span>'+(j.status!=='New'?'<span class="chip st-'+esc(j.status)+'">'+esc(j.status)+'</span>':'')+'</div>'+
+  '<h3>'+esc(j.title)+'</h3><div class="co">'+esc(j.company)+'</div><div class="meta">'+
+  (j.location?'<span>'+ic('pin')+esc(j.location)+(j.mode?' · '+esc(j.mode):'')+'</span>':'')+(j.exp?'<span>'+ic('brief')+esc(j.exp)+'</span>':'')+
+  '<span>'+ic('cash')+esc(j.salary||'Salary not stated')+'</span>'+(j.age!=null?'<span>'+ic('clock')+ago(j.age)+(j.source?' · '+esc(j.source):'')+'</span>':'')+'</div>'+
+  (j.parts.length?'<div class="bars">'+j.parts.map(p=>'<div class="bar" title="'+p.name+' '+p.got+'/'+p.of+'"><i><b style="width:'+(p.of?Math.round(p.got/p.of*100):0)+'%"></b></i><small>'+p.name+'</small></div>').join('')+'</div>':'')+'</div>'+
+  '<div class="job-actions"><div class="row"><button class="btn icon'+(j.status==='Shortlisted'?' good':'')+'" data-act="short" title="'+(j.status==='Shortlisted'?'Remove from shortlist':'Shortlist')+'">'+ic('star',j.status==='Shortlisted')+'</button>'+
+  '<button class="btn icon" data-act="'+(j.status==='Not interested'?'undo':'no')+'" title="'+(j.status==='Not interested'?'Move back to review':'Not interested')+'">'+ic(j.status==='Not interested'?'up':'x')+'</button>'+
+  (j.url?'<a class="btn icon" href="'+esc(j.url)+'" target="_blank" rel="noopener" title="Open the posting" onclick="event.stopPropagation()">'+ic('ext')+'</a>':'')+'</div>'+tailorBtn(j)+applyBtn(j)+'</div></article>').join('')||
+  '<div class="card empty">'+ic('search')+'<div><b>No jobs match these filters.</b></div><div class="small">'+(D.jobs.length?'Try “All” statuses or a lower minimum score.':'Jobs appear here after Gemini\'s first daily search.')+'</div></div>'}
+function jobClick(e){const card=e.target.closest('[data-id]');if(!card)return;const b=e.target.closest('[data-act]'),id=card.dataset.id;
+ if(!b)return openJob(id);e.stopPropagation();act(b.dataset.act,id)}
+function act(a,id){const j=D.jobs.find(x=>x.id===id);if(!j)return;
+ if(a==='short')return setJob(j,j.status==='Shortlisted'?'New':'Shortlisted');
+ if(a==='no')return setJob(j,'Not interested');if(a==='undo')return setJob(j,'New');
+ if(a==='tailor')return tailor(j);if(a==='apply')return apply(j)}
+function setJob(j,s){const prev=j.status;j.status=s;render();renderTabs();
+ call('setStatus',j.id,s).then(()=>toast(s==='Shortlisted'?'Shortlisted':s==='Not interested'?'Hidden from your review list':'Moved back to review')).catch(e=>{j.status=prev;render();fail(e)})}
+function openJob(id){const j=D.jobs.find(x=>x.id===id);if(!j)return;const has=j.must.filter(m=>m.ok).length;
+ const chipList=l=>'<div class="chips">'+l.map(m=>'<span class="chip '+(m.ok?'ok':'miss')+'">'+(m.ok?'✓ ':'')+esc(m.t)+'</span>').join('')+'</div>';
+ modal({size:'big',title:'<div style="display:flex;gap:14px;align-items:center">'+ring(j,true)+'<div><div class="chips"><span class="chip '+j.band+'">'+j.band+' match</span><span class="chip st-'+esc(j.status)+'">'+esc(j.status)+'</span></div><h2 style="margin-top:6px;font-size:18px">'+esc(j.title)+'</h2><div class="muted">'+esc(j.company)+'</div></div></div>',
+  body:'<div class="meta" style="margin-top:0">'+(j.location?'<span>'+ic('pin')+esc(j.location)+(j.mode?' · '+esc(j.mode):'')+'</span>':'')+(j.exp?'<span>'+ic('brief')+esc(j.exp)+'</span>':'')+'<span>'+ic('cash')+esc(j.salary||'Salary not stated')+'</span>'+(j.posted?'<span>'+ic('clock')+'Posted '+esc(j.posted)+(j.source?' on '+esc(j.source):'')+'</span>':'')+'</div>'+
+  (j.parts.length?'<div class="sec"><h4>Why it scored '+j.score+'</h4>'+j.parts.map(p=>'<div class="brk"><span>'+p.name+'</span><i><b style="width:'+(p.of?Math.round(p.got/p.of*100):0)+'%"></b></i><span class="muted">'+p.got+'/'+p.of+'</span></div>').join('')+'</div>':'')+
+  (j.must.length?'<div class="sec"><h4>Must have · you match '+has+' of '+j.must.length+'</h4>'+chipList(j.must)+'</div>':'')+
+  (j.nice.length?'<div class="sec"><h4>Nice to have</h4>'+chipList(j.nice)+'</div>':'')+
+  (j.description?'<div class="sec"><h4>Description</h4><div class="desc">'+esc(j.description)+'</div></div>':'')+
+  (j.tailor&&j.tailor.status==='FAILED'?'<div class="warn">Last tailoring was not used: '+esc(j.tailor.note)+'</div>':''),
+  actions:[...(j.url?[{label:ic('ext')+'Open posting',value:'open'}]:[]),{label:ic('star',j.status==='Shortlisted')+(j.status==='Shortlisted'?'Unshortlist':'Shortlist'),value:'short'},
+   ...(j.tailor&&j.tailor.docUrl?[{label:ic('check')+'Open tailored CV',cls:'good',value:'cv'}]:j.tailor&&j.tailor.status==='QUEUED'?[]:[{label:ic('cv')+'Tailor CV',value:'tailor'}]),
+   ...(j.status==='Applied'?[]:[{label:ic('apps')+'Apply',cls:'primary',value:'apply'}])]})
+ .then(v=>{if(v==='open')window.open(j.url,'_blank');else if(v==='cv')window.open(j.tailor.docUrl,'_blank');else if(v)act(v,j.id)})}
+function tailor(j){modal({title:'<h2>Tailor your CV</h2><div class="muted small">'+esc(j.title)+' · '+esc(j.company)+'</div>',
+  body:'<p class="muted" style="margin-top:0">Gemini rewrites your CV and a cover letter for this job using only facts already in your CV. You get an email with Word and PDF files, usually within minutes.</p><label class="small muted">Anything to stress? (optional)</label><textarea id="tnote" placeholder="e.g. my sell-side M&amp;A work"></textarea>',
+  actions:[{label:'Cancel',value:null},{label:'Request tailored CV',cls:'primary',read:s=>s.querySelector('#tnote').value}]})
+ .then(note=>{if(note==null)return;const prev=j.tailor;j.tailor={status:'QUEUED'};render();
+  return call('requestTailor',j.id,note).then(()=>toast('Requested. Watch your inbox.')).catch(e=>{j.tailor=prev;render();fail(e)})})}
+function apply(j){call('applyJob',j.id,false).then(r=>{
+ if(r.open){window.open(r.open,'_blank');return modal({title:'<h2>Applying on the company site</h2>',body:'<p class="muted" style="margin-top:0">'+esc(r.note)+'</p>'+(j.tailor&&j.tailor.docUrl?'<a href="'+esc(j.tailor.docUrl)+'" target="_blank" rel="noopener">Open your tailored CV</a>':'<div class="warn">Tip: tailor your CV for this job first.</div>'),
+  actions:[{label:'Not yet',value:false},{label:ic('check')+"I've applied",cls:'primary',value:true}]}).then(v=>{if(v)markApplied(j)})}
+ if(r.needTailor)return confirmBox('Tailor your CV first','This job takes applications by email. Your tailored CV is attached automatically, so it needs to exist first.','Tailor now').then(v=>{if(v)tailor(j)});
+ if(r.confirm)return confirmBox('Send your application?',esc(r.confirm)+' Your cover letter goes in the email body and your tailored CV is attached as a PDF.','Send application').then(v=>{if(!v)return;
+  return call('applyJob',j.id,true).then(x=>{if(x.sent){toast('Application sent');refresh()}})})}).catch(fail)}
+function markApplied(j){call('markApplied',j.id).then(()=>{toast('Added to your applications');refresh()}).catch(fail)}
+
+/* ---------- applications ---------- */
+function renderApps(){const apps=D.applications,count=s=>apps.filter(a=>a.status===s).length;
+ $('#view').innerHTML='<div class="page-head"><div><h1>Applications</h1><div class="muted">'+apps.length+' tracked · '+count('Interviewing')+' interviewing · '+count('Offer')+' offers</div></div></div>'+
+ '<div class="apps" id="appList">'+(apps.map((a,i)=>'<div class="card" data-i="'+i+'"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><h3>'+esc(a.title||a.jobId)+'</h3><div class="muted small">'+esc(a.company)+' · applied '+esc(a.appliedOn)+' by '+esc(String(a.method||'').toLowerCase())+
+  (a.cvFile?' · <a href="'+esc(a.cvFile)+'" target="_blank" rel="noopener">CV sent</a>':'')+(a.url?' · <a href="'+esc(a.url)+'" target="_blank" rel="noopener">posting</a>':'')+'</div></div>'+
+  '<span class="chip st-'+esc(a.status)+'">'+esc(a.status)+'</span></div>'+
+  '<div class="app-grid"><div><label>Status</label><select data-f="status">'+D.appStatuses.map(s=>'<option'+(s===a.status?' selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
+  '<div><label>Follow up on'+(a.due?' · <span class="due">due</span>':'')+'</label><input type="date" data-f="followUp" value="'+esc(a.followUp)+'"></div>'+
+  '<div class="wide"><label>Next step</label><input data-f="next" value="'+esc(a.next)+'" placeholder="e.g. HR call on Monday"></div>'+
+  '<div class="wide"><button class="btn primary" data-save disabled>Save</button></div></div>'+
+  '<details style="margin-top:10px"><summary class="muted small" style="cursor:pointer">Notes</summary><textarea data-f="notes" style="margin-top:8px" placeholder="Interviewers, questions asked, salary discussed…">'+esc(a.notes)+'</textarea></details></div>').join('')||
+  '<div class="card empty">'+ic('apps')+'<div><b>No applications yet.</b></div><div class="small">When you apply from the Jobs tab, it shows up here so you can track replies and follow-ups.</div></div>')+'</div>';
+ const list=$('#appList');list.oninput=e=>{const c=e.target.closest('[data-i]');if(c)c.querySelector('[data-save]').disabled=false};
+ list.onclick=e=>{const b=e.target.closest('[data-save]');if(!b)return;const c=b.closest('[data-i]'),a=apps[+c.dataset.i],ch={};
+  c.querySelectorAll('[data-f]').forEach(f=>{if(String(f.value)!==String(a[f.dataset.f]||''))ch[f.dataset.f]=f.value});
+  b.disabled=true;call('updateApplication',a.jobId,ch).then(()=>{toast('Saved');refresh()}).catch(e=>{b.disabled=false;fail(e)})}}
+
+/* ---------- my CV ---------- */
 const MIME={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',pdf:'application/pdf',txt:'text/plain',rtf:'application/rtf',odt:'application/vnd.oasis.opendocument.text'};
 let CVDOC='';
-function uploadCv(){const f=document.getElementById('cvfile').files[0],out=document.getElementById('cvout');
- if(!f){alert('Choose your CV file first.');return}
- if(f.size>10*1024*1024){alert('That file is over 10 MB.');return}
- out.textContent='Reading your CV…';
- const r=new FileReader();r.onload=()=>api('importCv',[f.name,MIME[f.name.split('.').pop().toLowerCase()]||f.type,String(r.result).split(',')[1]],
-  showCv,e=>out.textContent='Could not read the CV: '+e.message);
- r.readAsDataURL(f)}
+function renderCv(){const p=D.profile,chips=(l,cls)=>l.length?'<div class="chips">'+l.map(x=>'<span class="chip '+(cls||'')+'">'+esc(x)+'</span>').join('')+'</div>':'<span class="muted">–</span>';
+ $('#view').innerHTML='<div class="page-head"><div><h1>My CV</h1><div class="muted">What the app knows about you. It uses this to score jobs and tailor your CV.</div></div>'+(p.cvUrl?'<a class="btn" href="'+esc(p.cvUrl)+'" target="_blank" rel="noopener">'+ic('ext')+'Open master CV</a>':'')+'</div>'+
+ '<div class="cols"><div class="card">'+(D.health.hasCv?'<h2 style="font-size:19px">'+esc(p.name)+'</h2><div class="muted">'+esc([p.headline,p.city,p.years?p.years+' years experience':''].filter(Boolean).join(' · '))+'</div>'+
+  '<div class="sec"><h4>Skills</h4>'+chips(p.skills,'ok')+'</div><div class="sec"><h4>Tools</h4>'+chips(p.tools)+'</div><div class="sec"><h4>Certifications</h4>'+chips(p.certifications)+'</div><div class="sec"><h4>Education</h4>'+(p.education.map(e=>'<div>'+esc(e)+'</div>').join('')||'<span class="muted">–</span>')+'</div>'
+  :'<div class="empty">'+ic('cv')+'<div><b>No CV yet.</b></div><div class="small">Upload it here. Any layout works: Word, PDF or text.</div></div>')+'</div>'+
+ '<div class="stack"><div class="card"><h2>'+(D.health.hasCv?'Replace your CV':'Upload your CV')+'</h2><p class="muted small">Nothing is saved until you review what was found and click “Use this CV”.</p>'+
+  '<label class="drop" id="drop">'+ic('up')+'<div><b>Drop your CV here</b> or click to choose</div><div class="muted small">Word, PDF or text · up to 10 MB</div><input type="file" id="cvfile" accept=".docx,.doc,.pdf,.txt,.rtf,.odt" class="hidden"></label></div></div></div>'+
+ '<div id="cvout"></div>';
+ const drop=$('#drop'),inp=$('#cvfile');inp.onchange=()=>inp.files[0]&&uploadCv(inp.files[0]);
+ ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+ ['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
+ drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)uploadCv(f)})}
+function uploadCv(f){const out=$('#cvout');if(f.size>10*1024*1024)return toast('That file is over 10 MB',true);
+ out.innerHTML='<div class="card" style="margin-top:16px">Reading '+esc(f.name)+'…</div>';
+ const r=new FileReader();r.onload=()=>call('importCv',f.name,MIME[f.name.split('.').pop().toLowerCase()]||f.type,String(r.result).split(',')[1]).then(showCv).catch(e=>{out.innerHTML='';fail(e)});r.readAsDataURL(f)}
 function showCv(res){CVDOC=res.docId;const cv=res.cv;
- const jobs=cv.experience.map(e=>'<li>'+esc(e.role||'(title not found)')+' · '+esc(e.company||'(company not found)')+' <span class="muted">'+esc(e.start)+' – '+esc(e.end)+'</span></li>').join('');
- const rows=res.plan.map(p=>'<tr><td>'+esc(p.field)+'</td><td>'+esc(p.current||'—')+'</td><td>'+(p.change?'<b>'+esc(p.proposed)+'</b>':esc(p.current||'—')+' <span class="muted">(kept)</span>')+'</td></tr>').join('');
- document.getElementById('cvout').innerHTML=(cv.warnings.length?'<div class="warn">Please check: '+cv.warnings.map(esc).join('<br>')+'</div>':'')+
-  '<p><b>Jobs found</b> ('+cv.totalYears+' years in total, internships not counted)</p><ul>'+jobs+'</ul>'+
-  '<table class="plan"><tr><th>Setting</th><th>Now</th><th>After</th></tr>'+rows+'</table>'+
-  '<div class="bar"><button class="primary" onclick="useCv()">Use this CV</button><button onclick="document.getElementById(\'cvout\').innerHTML=\'\'">Cancel</button></div>'}
-function useCv(){if(!confirm('Save these details to your Job Finder settings?'))return;
- api('applyCv',[CVDOC],r=>{document.getElementById('cvout').innerHTML='Saved. '+r.changed.length+' settings updated. You can edit any of them in Settings or the Profile tab.'})}
+ $('#cvout').innerHTML='<div class="card" style="margin-top:16px"><h2>Here\'s what I found</h2>'+(cv.warnings.length?'<div class="warn"><b>Please check:</b><br>'+cv.warnings.map(esc).join('<br>')+'</div>':'')+
+  '<div class="sec"><h4>Jobs · '+cv.totalYears+' years in total (internships not counted)</h4>'+cv.experience.map(e=>'<div class="kv"><span style="color:var(--ink)"><b>'+esc(e.role||'(title not found)')+'</b> · '+esc(e.company||'(company not found)')+'</span><span>'+esc(e.start)+' – '+esc(e.end)+'</span></div>').join('')+'</div>'+
+  '<div class="sec"><h4>Settings this will fill in</h4><table class="plan"><tr><th>Setting</th><th>Now</th><th>After</th></tr>'+res.plan.map(p=>'<tr><td>'+esc(p.field)+'</td><td class="muted">'+esc(p.current||'–')+'</td><td>'+(p.change?'<b>'+esc(p.proposed)+'</b>':esc(p.current||'–')+' <span class="muted small">(kept)</span>')+'</td></tr>').join('')+'</table></div>'+
+  '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="$(\'#cvout\').innerHTML=\'\'">Cancel</button><button class="btn primary" onclick="useCv()">Use this CV</button></div></div>';
+ $('#cvout').scrollIntoView({behavior:'smooth'})}
+function useCv(){confirmBox('Use this CV?','Your profile and search settings will be updated as shown. You can edit any of them later.','Use this CV').then(v=>{if(!v)return;
+ call('applyCv',CVDOC).then(r=>{toast(r.changed.length+' settings updated');refresh()}).catch(fail)})}
+
+/* ---------- settings ---------- */
 let SETTINGS=[];
-function loadSettings(){api('getSettings',[],list=>{SETTINGS=list;let g='';
- document.getElementById('setForm').innerHTML=list.map((s,i)=>{const head=s.group!==g?'<h4>'+esc(g=s.group)+'</h4>':'';
-  const input=s.type==='yesno'?'<select id="set'+i+'"><option'+(s.value==='NO'?' selected':'')+' value="NO">No</option><option'+(s.value==='YES'?' selected':'')+' value="YES">Yes</option></select>'
-   :'<input id="set'+i+'" value="'+esc(s.value)+'" '+(s.type==='number'?'inputmode="decimal"':s.type==='emails'?'type="email" multiple':'')+(s.help?' placeholder="'+esc(s.help)+'"':'')+'>';
-  return head+'<label for="set'+i+'">'+esc(s.label)+'</label>'+input}).join('')})}
-function saveSet(){const ch={};SETTINGS.forEach((s,i)=>{const v=document.getElementById('set'+i).value;if(v!==String(s.value))ch[s.key]=v});
- const msg=document.getElementById('setMsg');if(!Object.keys(ch).length){msg.textContent='Nothing changed.';return}
- if(!confirm('Save '+Object.keys(ch).length+' changed setting(s)?'))return;
- api('saveSettings',[ch],r=>{if(r.ok){msg.innerHTML='Saved: '+r.saved.map(esc).join(', ');SETTINGS=[];loadSettings()}
-  else msg.innerHTML='<div class="err">Not saved:<br>'+r.errors.map(esc).join('<br>')+'</div>'})}
-function testMail(){if(!confirm('Send one test email to your alert address?'))return;
- api('sendTestAlert',[],to=>document.getElementById('setMsg').textContent='Test email sent to '+to+'.',
-  e=>document.getElementById('setMsg').innerHTML='<div class="err">'+esc(e.message)+'</div>')}
+function renderSettings(){$('#view').innerHTML='<div class="page-head"><div><h1>Settings</h1><div class="muted">Changes apply from the next check, within 5 minutes.</div></div></div>'+
+ '<div class="card"><div class="set" id="setForm">Loading…</div><div id="setMsg" style="margin-top:10px"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn" onclick="testMail()">Send me a test alert</button><button class="btn primary" onclick="saveSet()">Save settings</button></div></div>'+
+ '<div class="card" style="margin-top:16px"><h2>Security</h2><p class="muted small">This page is public but locked by your PIN. Five wrong tries lock it, and you get an email.</p>'+
+ '<div class="app-grid"><div><label>Current PIN</label><input id="oldPin" type="password" inputmode="numeric"></div><div><label>New PIN (4–12 digits)</label><input id="newPin" type="password" inputmode="numeric"></div><div class="wide"><button class="btn" onclick="changePinNow()">Change PIN</button></div></div></div>';
+ call('getSettings').then(list=>{SETTINGS=list;let g='';$('#setForm').innerHTML=list.map((s,i)=>{const head=s.group!==g?'<h4>'+esc(g=s.group)+'</h4>':'';
+  const input=s.type==='yesno'?'<select id="set'+i+'"><option value="NO"'+(s.value==='NO'?' selected':'')+'>No</option><option value="YES"'+(s.value==='YES'?' selected':'')+'>Yes</option></select>'
+   :'<input id="set'+i+'" value="'+esc(s.value)+'"'+(s.type==='number'?' inputmode="decimal"':'')+(s.help?' placeholder="'+esc(s.help)+'"':s.type==='time'?' placeholder="HH:MM"':'')+'>';
+  return head+'<label for="set'+i+'">'+esc(s.label)+'</label>'+input}).join('')}).catch(fail)}
+function saveSet(){const ch={};SETTINGS.forEach((s,i)=>{const v=$('#set'+i).value;if(v!==String(s.value))ch[s.key]=v});const msg=$('#setMsg');
+ if(!Object.keys(ch).length)return toast('Nothing changed');
+ call('saveSettings',ch).then(r=>{if(r.ok){msg.innerHTML='';toast('Saved: '+r.saved.join(', '));refresh()}
+  else msg.innerHTML='<div class="warn"><b>Not saved.</b><br>'+r.errors.map(esc).join('<br>')+'</div>'}).catch(fail)}
+function testMail(){confirmBox('Send a test alert?','One sample email goes to your alert address.','Send').then(v=>{if(v)call('sendTestAlert').then(to=>toast('Test email sent to '+to)).catch(fail)})}
+function changePinNow(){const o=$('#oldPin').value,n=$('#newPin').value;if(!/^\d{4,12}$/.test(n))return toast('New PIN: use 4 to 12 digits',true);
+ modal({title:'<h2>Confirm new PIN</h2>',body:'<input id="pin2" type="password" inputmode="numeric" placeholder="Type the new PIN again">',actions:[{label:'Cancel',value:null},{label:'Change PIN',cls:'primary',read:s=>s.querySelector('#pin2').value}]})
+ .then(v=>{if(v==null)return;if(v!==n)return toast('The two PINs did not match',true);call('changePin',o,n).then(()=>{$('#oldPin').value=$('#newPin').value='';toast('PIN changed')}).catch(fail)})}
+
 if(TOKEN)openApp();else showGate();
 </script></body></html>

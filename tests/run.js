@@ -238,12 +238,51 @@ const tests = {
     assert.ok(mail.subject.startsWith('Job Finder: 15 new job(s)'));
   },
 
-  'dashboard data lists jobs best first'(env = seeded()) {
-    job(env, { 'Location': 'Delhi' }); job(env);
-    env.app.pollTick();
-    const list = env.app.getJobs(env.unlock());
-    assert.ok(list[0].score >= list[1].score);
+  'dashboard data lists jobs best first and contains no raw dates'(env = seeded()) {
+    job(env, { 'Location': 'Delhi' }); const best = job(env);
+    env.app.append_('Applications', { 'Job ID': best, 'Applied On': new Date(), 'Method': 'Email', 'Status': 'Applied', 'Follow-up On': new Date(Date.now() - 864e5) });
+    runDone(env, 'RUN-1'); env.app.pollTick();
+    const d = env.app.getDashboard(env.unlock());
+    assert.ok(d.jobs[0].score >= d.jobs[1].score);
+    const dates = [], walk = (v, path) => { if (Object.prototype.toString.call(v) === '[object Date]') dates.push(path);
+      else if (v && typeof v === 'object') Object.keys(v).forEach(k => walk(v[k], path + '.' + k)); };
+    walk(d, 'd');
+    assert.strictEqual(dates.join(', '), '', 'no Date objects: the page bridge cannot carry them');
+    assert.strictEqual(d.applications[0].due, true, 'follow-up date passed');
+    assert.strictEqual(d.health.hasRuns, true);
+    assert.ok(d.jobs[0].must.every(m => m.ok), 'must-have skills matched against the profile');
+    assert.strictEqual(d.jobs[0].parts.length, 5);
   },
+
+  'job status changes accept only known statuses'(env = seeded()) {
+    const id = job(env), t = env.unlock();
+    assert.strictEqual(env.app.setStatus(t, id, 'Shortlisted'), 'Shortlisted');
+    assert.throws(() => env.app.setStatus(t, id, '<script>'), /Unknown status/);
+    assert.throws(() => env.app.setStatus(t, 'nope', 'New'), /Job not found/);
+    assert.strictEqual(jobRow(env, id).Status, 'Shortlisted');
+  },
+
+  'marking a portal application as applied tracks it once'(env = seeded()) {
+    const id = job(env), t = env.unlock();
+    env.app.markApplied(t, id); env.app.markApplied(t, id);
+    const apps = env.app.rows_('Applications');
+    assert.strictEqual(apps.length, 1);
+    assert.strictEqual(apps[0].Method, 'Portal');
+    assert.strictEqual(jobRow(env, id).Status, 'Applied');
+    assert.strictEqual(env.state.emails.length, 0, 'nothing is sent');
+  },
+
+  'application tracker saves only valid fields'(env = seeded()) {
+    const id = job(env), t = env.unlock();
+    env.app.markApplied(t, id);
+    assert.throws(() => env.app.updateApplication(t, id, { status: 'Hired!!' }), /Unknown status/);
+    assert.throws(() => env.app.updateApplication(t, id, { followUp: 'next week' }), /Follow-up date/);
+    env.app.updateApplication(t, id, { status: 'Interviewing', next: 'Partner round', followUp: '2026-10-25', notes: 'Asked about QoE' });
+    const a = env.app.getDashboard(t).applications[0];
+    assert.strictEqual(a.status, 'Interviewing'); assert.strictEqual(a.next, 'Partner round');
+    assert.strictEqual(a.followUp, '2026-10-25'); assert.strictEqual(a.notes, 'Asked about QoE');
+  },
+
 
   'settings form lists every editable setting with its current value'(env = seeded()) {
     const list = env.app.getSettings(env.unlock());
@@ -291,7 +330,7 @@ const tests = {
   'without the PIN, page actions are refused and nothing is sent'(env = seeded()) {
     const id = job(env, { 'Apply Email': 'hiring@example.com' });
     env.unlock();
-    ['getJobs', 'getSettings', 'sendTestAlert'].forEach(f => assert.throws(() => env.app[f](''), /NEEDS_PIN/, f));
+    ['getDashboard', 'getSettings', 'sendTestAlert'].forEach(f => assert.throws(() => env.app[f](''), /NEEDS_PIN/, f));
     assert.throws(() => env.app.applyJob('made-up-token', id, true), /NEEDS_PIN/);
     assert.throws(() => env.app.previewCv(undefined, 'some-doc'), /NEEDS_PIN/);
     assert.throws(() => env.app.saveSettings('', { 'Email To': 'thief@example.com' }), /NEEDS_PIN/);
@@ -321,9 +360,9 @@ const tests = {
 
   'an unlock lasts 6 hours'(env = seeded()) {
     const t = env.unlock();
-    assert.ok(env.app.getJobs(t));
+    assert.ok(env.app.getDashboard(t));
     env.setNow('2026-10-19T09:31:00Z');
-    assert.throws(() => env.app.getJobs(t), /NEEDS_PIN/);
+    assert.throws(() => env.app.getDashboard(t), /NEEDS_PIN/);
   },
 
   'only the signed-in owner can create the first PIN or run setup'(env = seeded()) {

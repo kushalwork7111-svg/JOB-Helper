@@ -1,4 +1,4 @@
-const APP_VERSION = '0.5';
+const APP_VERSION = '0.6';
 const SHEET_TITLE = 'Job Finder Data';
 const TRIGGER_SUBJECT = 'Job Finder: tailoring requested';
 const TABS = {
@@ -74,10 +74,15 @@ function today_() { return Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyy
 function esc_(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
 
 /* ---------- scoring (the app scores; the research engine only records facts) ---------- */
+/** True for a job requirement the owner's profile covers (skills, tools or certifications). */
+function skillMatcher_(p) {
+  const mine = list_([p['Core Skills'], p['Tools'], p['Certifications']].join(';'));
+  return term => { term = String(term).toLowerCase().trim(); return mine.some(s => s && (term.indexOf(s) >= 0 || s.indexOf(term) >= 0)); };
+}
+
 function scoreJob_(j, p, c) {
   const w = k => num_(c['Weight ' + k]);
-  const mine = list_([p['Core Skills'], p['Tools'], p['Certifications']].join(';'));
-  const has = term => mine.some(s => s && (term.indexOf(s) >= 0 || s.indexOf(term) >= 0));
+  const has = skillMatcher_(p);
   const must = list_(j['Must Have']), nice = list_(j['Nice To Have']);
   const skills = must.length || nice.length
     ? (must.filter(has).length + 0.5 * nice.filter(has).length) / (must.length + 0.5 * nice.length) : 0.4;
@@ -128,6 +133,7 @@ function sendAlert_(c) {
     htmlBody: '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px">' + cards +
       '<tr><td style="padding:16px;font-family:Arial,sans-serif"><a href="' + url + '" style="color:#1D4ED8">Open the dashboard to tailor or apply</a></td></tr></table>', name: 'Job Finder' });
   jobs.forEach(j => setCell_('Jobs', j._row, 'Emailed On', today_()));
+  PropertiesService.getScriptProperties().setProperty('LAST_ALERT', new Date().toISOString());
 }
 
 function missingRunCheck_(c) {
@@ -141,14 +147,6 @@ function missingRunCheck_(c) {
 
 /* ---------- web page (public link, locked by a PIN: see Access.gs) ---------- */
 function doGet() { const t = HtmlService.createTemplateFromFile('Index'); t.version = APP_VERSION; return t.evaluate().setTitle('Job Finder').addMetaTag('viewport', 'width=device-width, initial-scale=1'); }
-function getJobs(token) {
-  auth_(token);
-  return rows_('Jobs').map(j => ({ id: j['Job ID'], title: j.Title, company: j.Company, location: j.Location, mode: j['Work Mode'],
-    exp: j['Experience Asked'], salary: j.Salary, url: j['Apply URL'], email: j['Apply Email'], score: num_(j['Fit Score']),
-    breakdown: j['Score Breakdown'], status: j.Status || 'New', posted: String(j['Posted On']).slice(0, 15) }))
-    .sort((a, b) => b.score - a.score);
-}
-function setStatus(token, jobId, status) { auth_(token); const j = rows_('Jobs').find(r => r['Job ID'] === jobId); if (j) setCell_('Jobs', j._row, 'Status', status); return true; }
 
 /* ---------- tailoring ---------- */
 function requestTailor(token, jobId, instructions) {
@@ -228,7 +226,7 @@ function applyJob(token, jobId, confirmed) {
   auth_(token);
   const job = rows_('Jobs').find(j => j['Job ID'] === jobId); if (!job) throw new Error('Job not found');
   const tr = rows_('Tailor Requests').filter(r => r['Job ID'] === jobId && r['Doc URL']).pop();
-  if (!job['Apply Email']) return { open: job['Apply URL'], note: 'Portal application: the page opens; attach your tailored CV there.' };
+  if (!job['Apply Email']) return { open: job['Apply URL'], note: 'The application page opens in a new tab. Attach your tailored CV there, then click "I\'ve applied" to track it.' };
   if (!tr) return { needTailor: true };
   if (!confirmed) return { confirm: 'Send your application to ' + job['Apply Email'] + ' from your Gmail?' };
   const p = profile_(), id = tr['Doc URL'].match(/\/d\/([^/]+)/)[1];

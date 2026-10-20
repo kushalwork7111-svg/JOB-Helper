@@ -12,6 +12,7 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
 ## Releases
 | Version | Date | What changed | Recovery version |
 |---|---|---|---|
+| 0.6 | 2026-10-20 | Redesigned dashboard: Overview (setup checklist, stats, status, top matches, follow-ups), Jobs (filters, score rings, breakdown, detail view with skill match, Shortlist / Not interested, tailoring state), Applications tracker, My CV profile + drag-and-drop upload, Settings + security. New Dashboard.gs (getDashboard, setStatus, markApplied, updateApplication) (Apps Script version 5) | 4 |
 | 0.5 | 2026-10-20 | Link made public with no Google sign-in (ANYONE_ANONYMOUS); first PIN created with a one-time setup code whose hash is in src/Local.gs (gitignored, pushed only) (Apps Script version 4) | 3 |
 | 0.4 | 2026-10-20 | PIN lock: PIN screen, every page action needs an unlock (6 h), throttled guessing with owner email on lockout, change PIN in Settings; setup() owner-only. Link still private until owner creates PIN (Apps Script version 3) | 2 |
 | 0.3 | 2026-10-20 | Settings panel on the dashboard (alert email, filters, scoring) with validation and test alert; new defaults Work Modes, Min Salary (LPA), Exclude Companies auto-added to Config (Apps Script version 2) | 1 |
@@ -19,8 +20,8 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
 | 0.1 | 2026-10-19 | Phase 1: repo, starter app, local test harness (not yet deployed) | none |
 
 ## Layout
-- `src/` is the clasp root: `appsscript.json`, `Code.gs` (sheet, scoring, alerts, tailoring, apply), `Cv.gs` (CV reader and CV import), `Settings.gs` (dashboard settings form), `Access.gs` (PIN lock for the public link), `Index.html`. Create the project with `clasp create --type standalone --rootDir src --title "Job Finder"`.
-- `tests/harness.js` runs `src/*.gs` in Node against in-memory fakes of SpreadsheetApp, MailApp, DriveApp, DocumentApp, PropertiesService, Utilities, ScriptApp, UrlFetchApp and Session. `tests/run.js` holds the checks.
+- `src/` is the clasp root: `appsscript.json`, `Code.gs` (sheet, scoring, alerts, tailoring, apply), `Cv.gs` (CV reader and CV import), `Settings.gs` (dashboard settings form), `Access.gs` (PIN lock for the public link), `Dashboard.gs` (data and actions for the page), `Index.html`. Create the project with `clasp create --type standalone --rootDir src --title "Job Finder"`.
+- `tests/harness.js` runs `src/*.gs` in Node against in-memory fakes of SpreadsheetApp, MailApp, DriveApp, DocumentApp, PropertiesService, Utilities, ScriptApp, UrlFetchApp and Session. `tests/run.js` holds the checks. `node tests/preview.js <folder>` screenshots the real page (laptop and phone) against fictional demo data; check them after UI changes.
 - CV reader: rule-based (no AI, no keys). Nothing about the owner's CV is hard-coded; the owner's CV lives only in their Drive and the Profile tab.
   `tests/cv_fixtures.js` (tuning set) and `tests/cv_holdout.js` (written after tuning, to check it generalises) are fictional CVs in common layouts.
   `node tests/cv_accuracy.js [tuning|holdout|all]` prints field-level accuracy. When a real CV is misread, add a fictional CV in the same layout to a set, then fix the reader.
@@ -35,7 +36,8 @@ bump `APP_VERSION` → `node tests/run.js` (run it on its own, never piped, so a
 
 ## Phase status
 1. Repo and harness: done.
-2. Setup and sheet: setup() run by the owner 2026-10-20; dashboard deployed. Next: owner uploads CV on the dashboard and sets Email To.
+2. Setup and sheet: setup() run by the owner 2026-10-20; dashboard deployed. Next: owner creates PIN, uploads CV and sets Email To.
+5. Dashboard: done early (0.6). 7. Apply + tracker: tracker and portal 'I've applied' done; follow-up reminder email not yet. 8. Status panel done; missing-run alert existed already.
 3–9: see the build brief.
 
 ## Sign-in for clasp in cloud sessions

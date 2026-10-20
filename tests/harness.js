@@ -11,8 +11,9 @@ function formatDate(date, tz, fmt) {
   new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
     .formatToParts(new Date(date.getTime())).forEach(p => { parts[p.type] = p.value; });
-  return fmt.replace(/yyyy|MM|dd|HH|mm|ss/g, t => ({ yyyy: parts.year, MM: parts.month, dd: parts.day,
-    HH: parts.hour, mm: parts.minute, ss: parts.second }[t]));
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return fmt.replace(/yyyy|MMM|MM|dd|d|HH|mm|ss/g, t => ({ yyyy: parts.year, MMM: MON[+parts.month - 1], MM: parts.month, dd: parts.day,
+    d: String(+parts.day), HH: parts.hour, mm: parts.minute, ss: parts.second }[t]));
 }
 
 /* ---------- Sheets ---------- */
