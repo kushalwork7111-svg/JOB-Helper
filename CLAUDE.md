@@ -27,5 +27,10 @@ bump `APP_VERSION` → `node tests/run.js` → `clasp push --force` → `clasp d
 
 ## Phase status
 1. Repo and harness: done.
-2. Setup and sheet: in progress. CV upload built and tested locally; waiting on the owner's clasp sign-in to create the live project and sheet.
+2. Setup and sheet: in progress. Apps Script project "Job Finder" created (see .clasp.json) and code pushed 2026-10-20; next the owner runs setup() once from the editor to grant permissions and create the sheet.
 3–9: see the build brief.
+
+## Sign-in for clasp in cloud sessions
+Background processes do not survive session restarts, so `clasp login --no-localhost` cannot wait for the owner's reply.
+The owner approved a helper that keeps the sign-in state on disk in the session scratchpad (never in this repo).
+`clasp create` overwrites `src/appsscript.json` with Google defaults: restore it with `git checkout src/appsscript.json` before pushing.
