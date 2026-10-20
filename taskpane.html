@@ -2,50 +2,117 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Client-Ready</title>
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-<style>
- body{font:13px/1.4 "Trebuchet MS","Segoe UI",Arial,sans-serif;margin:0;color:#1F2937;background:#F8FAFC}
- header{background:#333333;color:#fff;padding:12px 14px;font-weight:600}
- #draft{background:#FEF3C7;color:#92400E;padding:8px 14px;font-size:12px;border-bottom:1px solid #FCD34D}
- section{padding:12px 14px;border-bottom:1px solid #E5E7EB}
- h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6B7280}
- label{display:block;font-size:12px;color:#4B5563;margin-top:6px}
- button{display:block;width:100%;margin:6px 0;padding:9px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;text-align:left;cursor:pointer;font:inherit}
- button:hover{border-color:#94A3B8} button:disabled{opacity:.6;cursor:wait}
- button.primary{background:#E81A3B;color:#fff;border:0}
- select,input{width:100%;padding:7px;margin:4px 0;box-sizing:border-box;font:inherit}
- #log{white-space:pre-wrap;font-size:12px;background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:8px;min-height:60px}
- a.goto{display:inline-block;margin:2px 4px 0 0;padding:1px 7px;border:1px solid #CBD5E1;border-radius:10px;color:#1F2937;text-decoration:none}
- #confirm{background:#FEF2F2;border:1px solid #FCA5A5;border-radius:6px;padding:8px;margin-bottom:8px}
- .row{display:flex;gap:6px} .row button{text-align:center}
- button.danger{background:#98002E;color:#fff;border:0}
- footer{padding:8px 14px;color:#9CA3AF;font-size:11px}
-</style></head><body>
-<header>Client-Ready · BDO formatting</header>
-<div id="draft" hidden>Brand rules are drafted from the BDO 2023 guidelines and template, awaiting approval. Try on copies of decks first.</div>
-<section><h3>Apply to</h3>
- <select id="scope" aria-label="Apply to"><option value="all">Whole presentation</option><option value="selected">Selected slides</option></select></section>
-<section><h3>One click</h3>
- <button class="primary" id="btnFixAll">Fix all (safe fixes)</button>
- <button id="btnCheck">Brand check + client-ready score</button></section>
-<section><h3>Titles</h3>
- <label for="titleCase">Title case</label>
- <select id="titleCase"><option value="sentence">Sentence case (BDO standard)</option><option value="none">Leave as typed</option><option value="title">Title Case</option></select>
- <button id="btnTitles">Unify titles</button></section>
-<section><h3>Text</h3>
- <button id="btnBody">Make body text size consistent</button>
- <label for="fontHeading">Heading font</label><input id="fontHeading">
- <label for="fontBody">Body font</label><input id="fontBody">
- <button id="btnFont">Change fonts</button>
- <button id="btnTidy">Left-align justified text, remove double spaces</button></section>
-<section><h3>Colours and clean-up</h3>
- <button id="btnColors">Snap colours to BDO palette</button>
- <button id="btnEmpty">Remove empty text boxes…</button>
- <button id="btnTerms">House terms (₹ … Cr / lakh)…</button></section>
-<section><h3>Result</h3>
- <div id="confirm" hidden><span id="confirmText"></span>
-  <div class="row"><button id="confirmYes" class="danger">Delete</button><button id="confirmNo">Cancel</button></div></div>
- <div id="log" role="status">Ready.</div></section>
-<footer id="ver"></footer>
+<link rel="stylesheet" href="taskpane.css">
+</head><body>
+<header class="appbar">
+  <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="brand"><strong>Client-Ready</strong><span>BDO brand assistant</span></div>
+  <span class="chip ver" id="ver"></span>
+</header>
+<div id="draft" class="banner" hidden>Brand rules drafted from the BDO 2023 guidelines and template, awaiting approval. Try on copies of decks first.</div>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" class="tab active" data-tab="review" aria-selected="true">Review</button>
+  <button role="tab" class="tab" data-tab="tools" aria-selected="false">Tools</button>
+  <button role="tab" class="tab" data-tab="rules" aria-selected="false">Rules</button>
+</nav>
+
+<main>
+  <!-- REVIEW -->
+  <section id="tab-review" class="tabpanel">
+    <div class="toolbar">
+      <div class="seg" role="radiogroup" aria-label="Scope">
+        <button class="on" data-scope="all" role="radio" aria-checked="true">Whole deck</button>
+        <button data-scope="selected" role="radio" aria-checked="false">Selected slides</button>
+      </div>
+      <button id="btnScan" class="btn primary">Scan</button>
+    </div>
+
+    <div id="empty-state" class="card hero">
+      <div class="hero-icon"><svg viewBox="0 0 48 48"><rect x="6" y="10" width="36" height="24" rx="3" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M16 40h16M24 34v6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M15 22l5 5 12-12" fill="none" stroke="#E81A3B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2>Make this deck client-ready</h2>
+      <p>Scan the deck to see every brand issue, zoomed in on the exact box, with the precise change for each one.</p>
+    </div>
+
+    <div id="summary" class="card summary" hidden>
+      <div class="score">
+        <svg viewBox="0 0 120 120" class="ring"><circle cx="60" cy="60" r="50" class="ring-bg"/><circle cx="60" cy="60" r="50" class="ring-fg" id="ringFg"/></svg>
+        <div class="score-num"><b id="scoreNum">–</b><span>client-ready</span></div>
+      </div>
+      <div class="stats">
+        <div><b id="stIssues">0</b><span>issues</span></div>
+        <div><b id="stFixable">0</b><span>auto-fixable</span></div>
+        <div><b id="stClean">0</b><span>clean slides</span></div>
+      </div>
+      <div id="catBars" class="catbars"></div>
+      <div class="sum-actions">
+        <button id="btnFixAll" class="btn primary block">Fix all safe issues</button>
+      </div>
+      <div id="deckNotes" class="notes"></div>
+    </div>
+
+    <div id="filters" class="filters" hidden>
+      <div class="chips" id="catChips"></div>
+      <div class="filter-row">
+        <div class="seg small" id="sevSeg">
+          <button class="on" data-sev="all">All</button><button data-sev="must">Must fix</button><button data-sev="should">Should</button><button data-sev="check">Check</button>
+        </div>
+        <div class="seg small" id="viewSeg">
+          <button class="on" data-view="slide">By slide</button><button data-view="type">By type</button>
+        </div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="showIgnored"> Show ignored <span id="ignoredCount"></span></label>
+    </div>
+
+    <div id="list"></div>
+
+    <details class="card activity" id="activity" hidden>
+      <summary>Activity <span id="actCount" class="chip"></span></summary>
+      <ol id="actList"></ol>
+    </details>
+  </section>
+
+  <!-- TOOLS -->
+  <section id="tab-tools" class="tabpanel" hidden>
+    <div class="toolbar"><span class="muted">Bulk actions apply to the scope chosen on Review.</span></div>
+    <div class="card tool">
+      <h3>Body text size</h3>
+      <p>Set every body text box to the BDO size. Titles, footers and source lines are left alone.</p>
+      <button class="btn" id="btnBody">Make body text <span data-brand="body.sizePt"></span> pt</button>
+    </div>
+    <div class="card tool">
+      <h3>Change fonts</h3>
+      <div class="two"><label>Headings<input id="fontHeading"></label><label>Body<input id="fontBody"></label></div>
+      <button class="btn" id="btnFont">Apply fonts</button>
+    </div>
+    <div class="card tool">
+      <h3>Remove empty text boxes</h3>
+      <p>Lists every empty text box and placeholder. Nothing is deleted until you confirm.</p>
+      <button class="btn" id="btnEmpty">Find empty boxes…</button>
+    </div>
+    <div class="card tool">
+      <h3>House terms</h3>
+      <p>₹ … Cr / lakh, e.g. "INR 5 crore" → "₹5 Cr". Each change is shown on Review (By type → House style) before you apply it.</p>
+      <button class="btn" id="btnTerms">Show house-style changes</button>
+    </div>
+  </section>
+
+  <!-- RULES -->
+  <section id="tab-rules" class="tabpanel" hidden>
+    <div class="card">
+      <h3>Title case</h3>
+      <select id="titleCase"><option value="sentence">Sentence case (BDO standard)</option><option value="title">Title Case</option><option value="none">Leave as typed</option></select>
+    </div>
+    <div class="card" id="rulesBody"></div>
+  </section>
+</main>
+
+<div id="confirm" class="sheet" hidden>
+  <div class="sheet-card"><p id="confirmText"></p>
+    <div class="row"><button id="confirmNo" class="btn">Cancel</button><button id="confirmYes" class="btn danger">Delete</button></div></div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
 <script src="src/rules.js"></script>
 <script src="taskpane.js"></script>
 </body></html>
