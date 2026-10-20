@@ -9,6 +9,7 @@ Owner: Kushal (BDO India DVCS, not a developer). Explain changes in plain busine
 - Guard newer APIs with isSetSupported; minimum PowerPointApi 1.4.
 - Pure logic lives in `src/rules.js` (works in the browser and in Node) and is unit-tested.
 - Before every push: `node tests/run.js` passes; bump VERSION in taskpane.js; record the release below.
+- Owner preference: no automatic background work. Do not subscribe to PR activity or schedule check-ins on PRs; only act when Kushal writes.
 
 ## Layout
 - `manifest.xml`: install file (points at the hosted `taskpane.html`).
