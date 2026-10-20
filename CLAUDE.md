@@ -4,7 +4,7 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
 - The app (Google Apps Script, src/) scores jobs, emails alerts, builds tailored CV files and sends applications only after the owner confirms.
 - Never invent CV facts; groundingProblems_ must pass before any file is sent.
 - No API keys, no paid services, no external AI calls from code.
-- Dashboard link is public (owner's choice, 2026-10-20) behind a PIN. Every function the page can call must start with auth_(token); public names without a trailing underscore are callable by anyone with the link. Never store the PIN in the repo.
+- Dashboard link is public (owner's choice, 2026-10-20) behind a PIN. Every function the page can call must start with auth_(token); public names without a trailing underscore are callable by anyone with the link. Never store the PIN in the repo. `src/Local.gs` (gitignored) holds the one-time setup-code hash; a push from a fresh checkout removes it, which is fine once a PIN exists.
 - One web-app deployment, always updated in place: clasp deploy -i <DEPLOYMENT_ID>. Record each release (version, date, what changed, recovery version) at the top of this file.
 - Before every deploy: node tests/run.js must pass. Never commit .clasprc.json or sign-in codes.
 - Sheet must stay Restricted (owner only) so Gemini runs unattended.
@@ -12,6 +12,7 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
 ## Releases
 | Version | Date | What changed | Recovery version |
 |---|---|---|---|
+| 0.5 | 2026-10-20 | Link made public with no Google sign-in (ANYONE_ANONYMOUS); first PIN created with a one-time setup code whose hash is in src/Local.gs (gitignored, pushed only) (Apps Script version 4) | 3 |
 | 0.4 | 2026-10-20 | PIN lock: PIN screen, every page action needs an unlock (6 h), throttled guessing with owner email on lockout, change PIN in Settings; setup() owner-only. Link still private until owner creates PIN (Apps Script version 3) | 2 |
 | 0.3 | 2026-10-20 | Settings panel on the dashboard (alert email, filters, scoring) with validation and test alert; new defaults Work Modes, Min Salary (LPA), Exclude Companies auto-added to Config (Apps Script version 2) | 1 |
 | 0.2 | 2026-10-20 | First live deployment (Apps Script version 1). CV upload: reads any CV layout, previews, configures Profile/Config on confirm; tailored CV built from CV facts | none |
@@ -30,7 +31,7 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
 - Sheet "Job Finder Data" created by setup() on 2026-10-20 (link is in Script Properties SHEET_ID; owner has it).
 
 ## Deploy routine
-bump `APP_VERSION` → `node tests/run.js` → `clasp push --force` → `clasp deploy -i <DEPLOYMENT_ID> -d "…"` → open the live page → commit and push → add a row to Releases above.
+bump `APP_VERSION` → `node tests/run.js` (run it on its own, never piped, so a failure stops the deploy) → `clasp push --force` → `clasp deploy -i <DEPLOYMENT_ID> -d "…"` → open the live page → commit and push → add a row to Releases above.
 
 ## Phase status
 1. Repo and harness: done.

@@ -2,4 +2,6 @@
 .clasprc.json
 **/.clasprc.json
 node_modules/
+# One-time setup code hash for the first PIN: pushed to Apps Script, never committed
+src/Local.gs
 .DS_Store

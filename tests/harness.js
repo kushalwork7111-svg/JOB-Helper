@@ -189,7 +189,8 @@ function createEnv(opts) {
   };
 
   const ctx = vm.createContext(sandbox);
-  fs.readdirSync(SRC).filter(f => f.endsWith('.gs')).sort()
+  // Local.gs holds the owner's one-time setup code hash: tests must not depend on it.
+  fs.readdirSync(SRC).filter(f => f.endsWith('.gs') && f !== 'Local.gs').sort()
     .forEach(f => vm.runInContext(fs.readFileSync(path.join(SRC, f), 'utf8'), ctx, { filename: f }));
 
   return {

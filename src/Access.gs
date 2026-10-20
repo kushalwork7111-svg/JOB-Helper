@@ -8,6 +8,15 @@ function pinHash_(pin, salt) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + ':' + pin)
     .map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
 }
+/** One-time setup code: lets the owner create the first PIN without Google sign-in. Its hash lives in Local.gs, which is pushed to Apps Script but never committed. */
+function setupCodeOk_(code) {
+  if (typeof SETUP_CODE_HASH_ === 'undefined' || !SETUP_CODE_HASH_) return false;
+  const props = PropertiesService.getScriptProperties(), fails = Number(props.getProperty('SETUP_FAILS') || 0);
+  if (fails >= 10) return false;
+  const ok = pinHash_(String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), 'setup') === SETUP_CODE_HASH_;
+  if (!ok) props.setProperty('SETUP_FAILS', String(fails + 1));
+  return ok;
+}
 function pinValid_(pin) { return /^\d{4,12}$/.test(String(pin || '')); }
 function setPin_(pin) {
   const salt = Utilities.getUuid();
@@ -28,13 +37,14 @@ function auth_(token) {
 /** First screen of the page: is a PIN set, and is the page locked after wrong guesses? */
 function pinStatus() {
   const p = PropertiesService.getScriptProperties().getProperties(), until = Number(p.PIN_LOCK_UNTIL || 0);
-  return { hasPin: !!p.PIN_HASH, canCreate: !p.PIN_HASH && isOwnerSignedIn_(), lockedMinutes: until > Date.now() ? Math.ceil((until - Date.now()) / 60000) : 0 };
+  const owner = isOwnerSignedIn_(), hasCode = typeof SETUP_CODE_HASH_ !== 'undefined' && !!SETUP_CODE_HASH_ && Number(p.SETUP_FAILS || 0) < 10;
+  return { hasPin: !!p.PIN_HASH, canCreate: !p.PIN_HASH && (owner || hasCode), needsSetupCode: !owner, lockedMinutes: until > Date.now() ? Math.ceil((until - Date.now()) / 60000) : 0 };
 }
 
-/** Creates the first PIN. Only possible while no PIN exists and the owner is signed in to Google. */
-function createPin(pin) {
+/** Creates the first PIN. Only possible while no PIN exists, for the owner signed in to Google or holding the one-time setup code. */
+function createPin(pin, setupCode) {
   if (PropertiesService.getScriptProperties().getProperty('PIN_HASH')) throw new Error('A PIN already exists');
-  if (!isOwnerSignedIn_()) throw new Error('Only the owner, signed in to Google, can create the PIN');
+  if (!isOwnerSignedIn_() && !setupCodeOk_(setupCode)) throw new Error('Only the owner can create the PIN: the setup code is wrong');
   if (!pinValid_(pin)) throw new Error('Use 4 to 12 digits');
   setPin_(pin);
   return unlock(pin);

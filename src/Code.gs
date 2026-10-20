@@ -1,4 +1,4 @@
-const APP_VERSION = '0.4';
+const APP_VERSION = '0.5';
 const SHEET_TITLE = 'Job Finder Data';
 const TRIGGER_SUBJECT = 'Job Finder: tailoring requested';
 const TABS = {

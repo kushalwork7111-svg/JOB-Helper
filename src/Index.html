@@ -22,6 +22,7 @@
 <section id="gate" class="card">
  <b id="gateTitle">Enter your PIN</b>
  <div class="muted" id="gateHelp"></div>
+ <input id="setupCode" class="hidden" placeholder="One-time setup code" autocomplete="off" style="font-size:16px;letter-spacing:2px">
  <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" onkeydown="if(event.key==='Enter')gateGo()">
  <button class="primary" onclick="gateGo()" id="gateBtn">Unlock</button>
  <div id="gateMsg" class="err"></div>
@@ -53,14 +54,15 @@ function api(fn,args,ok,fail){google.script.run.withSuccessHandler(ok||(()=>{}))
   if(/NEEDS_PIN/.test(e.message)){TOKEN='';try{sessionStorage.removeItem('jf')}catch(x){}showGate()}else(fail||(x=>alert(x.message)))(e)})[fn](TOKEN,...args)}
 function showGate(){document.getElementById('app').classList.add('hidden');document.getElementById('gate').classList.remove('hidden');
  google.script.run.withSuccessHandler(st=>{GATE=st;const t=document.getElementById('gateTitle'),h=document.getElementById('gateHelp'),b=document.getElementById('gateBtn');
-  if(st.canCreate){t.textContent='Create your PIN';h.textContent='4 to 12 digits. Longer is safer; avoid numbers from your email or phone.';b.textContent='Create PIN'}
+  if(st.canCreate){t.textContent='Create your PIN';h.textContent=(st.needsSetupCode?'Enter the one-time setup code, then choose a PIN. ':'')+'PIN: 4 to 12 digits. Longer is safer; avoid numbers from your email or phone.';b.textContent='Create PIN';
+   document.getElementById('setupCode').classList.toggle('hidden',!st.needsSetupCode)}
   else if(!st.hasPin){t.textContent='Not set up yet';h.textContent='The owner has not created a PIN yet.';b.disabled=true}
   else{t.textContent='Enter your PIN';h.textContent=st.lockedMinutes?'Locked for '+st.lockedMinutes+' more minutes after wrong PINs.':''}}).pinStatus()}
 function gateGo(){const pin=document.getElementById('pin').value,m=document.getElementById('gateMsg');m.textContent='';
  const done=r=>{if(r.ok){TOKEN=r.token;try{sessionStorage.setItem('jf',TOKEN)}catch(e){}document.getElementById('pin').value='';openApp()}else m.textContent=r.message};
  const err=e=>m.textContent=e.message;
  if(GATE.canCreate){if(!/^\d{4,12}$/.test(pin)){m.textContent='Use 4 to 12 digits.';return}if(prompt('Type the same PIN again to confirm')!==pin){m.textContent='The two PINs did not match.';return}
-  google.script.run.withSuccessHandler(done).withFailureHandler(err).createPin(pin)}
+  google.script.run.withSuccessHandler(done).withFailureHandler(err).createPin(pin,document.getElementById('setupCode').value)}
  else google.script.run.withSuccessHandler(done).withFailureHandler(err).unlock(pin)}
 function openApp(){document.getElementById('gate').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load()}
 function lockNow(){TOKEN='';try{sessionStorage.removeItem('jf')}catch(e){}showGate()}

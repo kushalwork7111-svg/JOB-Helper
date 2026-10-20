@@ -336,6 +336,25 @@ const tests = {
     assert.throws(() => env.app.createPin('654321'), /already exists/, 'cannot be replaced without the old PIN');
   },
 
+  'a visitor without Google sign-in can create the first PIN only with the setup code'(env = seeded()) {
+    env.state.activeUser = '';
+    env.app.SETUP_CODE_HASH_ = env.app.pinHash_('ABCD2345EF', 'setup');
+    const st = env.app.pinStatus();
+    assert.ok(st.canCreate && st.needsSetupCode);
+    assert.throws(() => env.app.createPin('246810', 'WRONG-CODE'), /setup code is wrong/);
+    assert.strictEqual(env.app.createPin('246810', 'abcd-2345-ef').ok, true, 'case and dashes ignored');
+    assert.throws(() => env.app.createPin('111111', 'ABCD2345EF'), /already exists/, 'code is useless once a PIN exists');
+    assert.strictEqual(env.app.pinStatus().canCreate, false);
+  },
+
+  'ten wrong setup codes disable the setup code'(env = seeded()) {
+    env.state.activeUser = '';
+    env.app.SETUP_CODE_HASH_ = env.app.pinHash_('ABCD2345EF', 'setup');
+    for (let i = 0; i < 10; i++) assert.throws(() => env.app.createPin('246810', 'GUESS' + i));
+    assert.throws(() => env.app.createPin('246810', 'ABCD2345EF'), /setup code is wrong/);
+    assert.strictEqual(env.app.pinStatus().canCreate, false);
+  },
+
   'changing the PIN needs the current PIN'(env = seeded()) {
     const t = env.unlock('739154');
     assert.throws(() => env.app.changePin(t, '000000', '258025'), /Current PIN is wrong/);
