@@ -11,7 +11,7 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
 ## Releases
 | Version | Date | What changed | Recovery version |
 |---|---|---|---|
-| 0.2 | 2026-10-19 | CV upload: reads any CV layout, previews, configures Profile/Config on confirm; tailored CV built from CV facts (no template markers) (not yet deployed) | none |
+| 0.2 | 2026-10-20 | First live deployment (Apps Script version 1). CV upload: reads any CV layout, previews, configures Profile/Config on confirm; tailored CV built from CV facts | none |
 | 0.1 | 2026-10-19 | Phase 1: repo, starter app, local test harness (not yet deployed) | none |
 
 ## Layout
@@ -22,12 +22,16 @@ Owner: Kushal (not a developer). Explain changes in plain business language firs
   `node tests/cv_accuracy.js [tuning|holdout|all]` prints field-level accuracy. When a real CV is misread, add a fictional CV in the same layout to a set, then fix the reader.
 - `prompts/spark_skill/job-finder-v1/SKILL.md` is uploaded to Gemini as a skill; `prompts/gemini_tasks.md` holds the three task texts.
 
+## Live app
+- Web app deployment ID: `AKfycbz0YCN95XGfwI78XI8WVCsMyzc2rCwnQoaCyovpzuJKmiz3-ynyBdOxBveEWxWlFXhU` (dashboard: https://script.google.com/macros/s/AKfycbz0YCN95XGfwI78XI8WVCsMyzc2rCwnQoaCyovpzuJKmiz3-ynyBdOxBveEWxWlFXhU/exec)
+- Sheet "Job Finder Data" created by setup() on 2026-10-20 (link is in Script Properties SHEET_ID; owner has it).
+
 ## Deploy routine
 bump `APP_VERSION` → `node tests/run.js` → `clasp push --force` → `clasp deploy -i <DEPLOYMENT_ID> -d "…"` → open the live page → commit and push → add a row to Releases above.
 
 ## Phase status
 1. Repo and harness: done.
-2. Setup and sheet: in progress. Apps Script project "Job Finder" created (see .clasp.json) and code pushed 2026-10-20; next the owner runs setup() once from the editor to grant permissions and create the sheet.
+2. Setup and sheet: setup() run by the owner 2026-10-20; dashboard deployed. Next: owner uploads CV on the dashboard and sets Email To.
 3–9: see the build brief.
 
 ## Sign-in for clasp in cloud sessions
