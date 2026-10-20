@@ -10,11 +10,21 @@
  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
  .score{font-weight:bold} .muted{color:var(--muted);font-size:12px}
  .plan{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0} .plan td,.plan th{border-bottom:1px solid var(--line);padding:6px;text-align:left;vertical-align:top;word-break:break-word}
+ details.card summary{cursor:pointer;font-weight:bold} .set{display:grid;grid-template-columns:minmax(160px,1fr) 2fr;gap:8px 12px;align-items:center;margin:8px 0}
+ .set input,.set select{width:100%;box-sizing:border-box} .set h4{grid-column:1/-1;margin:10px 0 0} .err{color:#B91C1C;font-size:13px}
+ @media (max-width:560px){.set{grid-template-columns:1fr}}
  .warn{background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px;font-size:13px}
  button{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer} button.primary{background:var(--accent);color:#fff;border:0}
 </style></head><body>
 <header>Job Finder <span class="muted" style="color:#94A3B8">v<?= version ?></span></header>
 <main>
+ <details class="card" style="margin-bottom:12px" id="settingsBox" ontoggle="if(this.open&&!SETTINGS.length)loadSettings()">
+  <summary>Settings</summary>
+  <div class="muted">Where alerts go, what to look for and how jobs are scored. Changes apply from the next check (within 5 minutes).</div>
+  <div class="set" id="setForm">Loading…</div>
+  <div class="bar"><button class="primary" onclick="saveSet()">Save settings</button><button onclick="testMail()">Send me a test alert</button></div>
+  <div id="setMsg"></div>
+ </details>
  <section class="card" style="margin-bottom:12px">
   <b>My CV</b>
   <div class="muted">Upload your CV (Word, PDF or text, any layout). The app reads it and sets itself up from it. Nothing is saved until you click "Use this CV".</div>
@@ -57,5 +67,19 @@ function showCv(res){CVDOC=res.docId;const cv=res.cv;
   '<div class="bar"><button class="primary" onclick="useCv()">Use this CV</button><button onclick="document.getElementById(\'cvout\').innerHTML=\'\'">Cancel</button></div>'}
 function useCv(){if(!confirm('Save these details to your Job Finder settings?'))return;
  google.script.run.withSuccessHandler(r=>{document.getElementById('cvout').innerHTML='Saved. '+r.changed.length+' settings updated. You can edit any of them in the Profile and Config tabs.'}).applyCv(CVDOC)}
+let SETTINGS=[];
+function loadSettings(){google.script.run.withSuccessHandler(list=>{SETTINGS=list;let g='';
+ document.getElementById('setForm').innerHTML=list.map((s,i)=>{const head=s.group!==g?'<h4>'+esc(g=s.group)+'</h4>':'';
+  const input=s.type==='yesno'?'<select id="set'+i+'"><option'+(s.value==='NO'?' selected':'')+' value="NO">No</option><option'+(s.value==='YES'?' selected':'')+' value="YES">Yes</option></select>'
+   :'<input id="set'+i+'" value="'+esc(s.value)+'" '+(s.type==='number'?'inputmode="decimal"':s.type==='emails'?'type="email" multiple':'')+(s.help?' placeholder="'+esc(s.help)+'"':'')+'>';
+  return head+'<label for="set'+i+'">'+esc(s.label)+'</label>'+input}).join('')}).getSettings()}
+function saveSet(){const ch={};SETTINGS.forEach((s,i)=>{const v=document.getElementById('set'+i).value;if(v!==String(s.value))ch[s.key]=v});
+ const msg=document.getElementById('setMsg');if(!Object.keys(ch).length){msg.textContent='Nothing changed.';return}
+ if(!confirm('Save '+Object.keys(ch).length+' changed setting(s)?'))return;
+ google.script.run.withSuccessHandler(r=>{if(r.ok){msg.innerHTML='Saved: '+r.saved.map(esc).join(', ');SETTINGS=[];loadSettings()}
+  else msg.innerHTML='<div class="err">Not saved:<br>'+r.errors.map(esc).join('<br>')+'</div>'}).saveSettings(ch)}
+function testMail(){if(!confirm('Send one test email to your alert address?'))return;
+ google.script.run.withSuccessHandler(to=>document.getElementById('setMsg').textContent='Test email sent to '+to+'.')
+  .withFailureHandler(e=>document.getElementById('setMsg').innerHTML='<div class="err">'+esc(e.message)+'</div>').sendTestAlert()}
 load();
 </script></body></html>

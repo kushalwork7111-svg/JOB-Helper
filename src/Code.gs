@@ -1,4 +1,4 @@
-const APP_VERSION = '0.2';
+const APP_VERSION = '0.3';
 const SHEET_TITLE = 'Job Finder Data';
 const TRIGGER_SUBJECT = 'Job Finder: tailoring requested';
 const TABS = {
@@ -17,6 +17,9 @@ const CONFIG_DEFAULTS = [
   ['Target Titles', '', 'Semicolon list, e.g. Manager - Deal Advisory; Value Creation Manager'],
   ['Locations', '', 'Semicolon list of preferred cities; add Remote if wanted'],
   ['Experience Years', '', 'Your total years of experience'],
+  ['Work Modes', 'On-site; Hybrid; Remote', 'Semicolon list of work modes to search for'],
+  ['Min Salary (LPA)', '', 'Lowest salary to consider, in lakh per annum; blank means any'],
+  ['Exclude Companies', '', 'Semicolon list of companies to skip'],
   ['Weight Skills', '40', ''], ['Weight Title', '20', ''], ['Weight Experience', '15', ''],
   ['Weight Location', '15', ''], ['Weight Recency', '10', ''],
   ['Strong Score', '75', ''], ['Good Score', '55', ''],
@@ -34,12 +37,17 @@ function setup() {
     const sh = ss.getSheetByName(name) || ss.insertSheet(name);
     if (sh.getLastRow() === 0) sh.appendRow(TABS[name]);
   });
-  const cfg = ss.getSheetByName('Config'), have = rows_('Config').map(r => r.Key);
-  CONFIG_DEFAULTS.filter(r => have.indexOf(r[0]) < 0).forEach(r => cfg.appendRow(r));
+  ensureConfig_();
   const first = ss.getSheetByName('Sheet1'); if (first && ss.getSheets().length > 1) ss.deleteSheet(first);
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('pollTick').timeBased().everyMinutes(5).create();
   Logger.log('Sheet: ' + ss.getUrl());
+}
+
+/** Adds any default setting missing from the Config tab (e.g. after an update adds a new one). Never changes existing values. */
+function ensureConfig_() {
+  const have = rows_('Config').map(r => r.Key);
+  CONFIG_DEFAULTS.filter(r => have.indexOf(r[0]) < 0).forEach(r => ss_().getSheetByName('Config').appendRow(r));
 }
 
 /* ---------- sheet helpers ---------- */
@@ -90,6 +98,7 @@ function scoreJob_(j, p, c) {
 
 /* ---------- every 5 minutes ---------- */
 function pollTick() {
+  ensureConfig_();
   const c = cfg_(), p = profile_(), paused = String(c['Research Paused']).toUpperCase() === 'YES';
   rows_('Jobs').filter(j => j['Fit Score'] === '').forEach(j => {
     const s = scoreJob_(j, p, c); setCell_('Jobs', j._row, 'Fit Score', s.score); setCell_('Jobs', j._row, 'Score Breakdown', s.breakdown);

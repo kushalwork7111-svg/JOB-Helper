@@ -245,6 +245,49 @@ const tests = {
     assert.ok(list[0].score >= list[1].score);
   },
 
+  'settings form lists every editable setting with its current value'(env = seeded()) {
+    const list = env.app.getSettings();
+    const email = list.find(s => s.key === 'Email To');
+    assert.strictEqual(email.value, 'owner@example.com');
+    assert.ok(!list.some(s => s.key === 'Master CV Doc ID'), 'CV link is set by uploading, not typed');
+    assert.strictEqual(list.find(s => s.key === 'Work Modes').value, 'On-site; Hybrid; Remote');
+  },
+
+  'saving settings validates and writes only changed values'(env = seeded()) {
+    const bad = env.app.saveSettings({ 'Email To': 'not-an-email', 'Min Fit Score': '150', 'Alert Time If No Run': '9am', 'Weight Skills': '50' });
+    assert.strictEqual(bad.ok, false);
+    assert.strictEqual(bad.errors.length, 4, bad.errors.join(' | '));
+    assert.strictEqual(env.app.cfg_()['Email To'], 'owner@example.com', 'nothing saved when anything is wrong');
+    const good = env.app.saveSettings({ 'Email To': 'a@example.com; b@example.com', 'Min Fit Score': '70', 'Locations': 'Pune ;Mumbai',
+      'Research Paused': 'yes', 'Experience Years': '8' });
+    assert.strictEqual(good.ok, true, (good.errors || []).join(' | '));
+    assert.strictEqual(good.saved.join(','), 'Email To,Min Fit Score,Locations,Research Paused');
+    const c = env.app.cfg_();
+    assert.strictEqual(c['Email To'], 'a@example.com, b@example.com');
+    assert.strictEqual(c.Locations, 'Pune; Mumbai');
+    assert.strictEqual(c['Research Paused'], 'YES');
+  },
+
+  'settings cannot change the CV link or unknown keys'(env = seeded()) {
+    const r = env.app.saveSettings({ 'Master CV Doc ID': 'x', 'Something': 'y' });
+    assert.strictEqual(r.ok, false);
+    assert.strictEqual(r.errors.length, 2);
+  },
+
+  'new default settings are added to an older sheet without touching existing values'(env = seeded()) {
+    const sh = env.sheet('Config'), row = env.app.rows_('Config').find(r => r.Key === 'Work Modes')._row;
+    sh.data.splice(row - 1, 1);
+    env.app.pollTick();
+    assert.strictEqual(env.app.cfg_()['Work Modes'], 'On-site; Hybrid; Remote');
+    assert.strictEqual(env.app.cfg_()['Email To'], 'owner@example.com');
+  },
+
+  'test alert goes only to the alert address'(env = seeded()) {
+    assert.strictEqual(env.app.sendTestAlert(), 'owner@example.com');
+    assert.strictEqual(env.state.emails.length, 1);
+    assert.strictEqual(env.state.emails[0].to, 'owner@example.com');
+  },
+
   'CV reader extracts every expected fact from 18 CV layouts'() {
     const sets = accuracy.SETS.tuning.concat(accuracy.SETS.holdout), misses = [];
     accuracy.score(sets).forEach(r => r.checks.filter(c => !c.ok).forEach(c => misses.push(r.format + ' / ' + c.field + ': got "' + c.got + '"')));
