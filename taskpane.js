@@ -1,11 +1,20 @@
 /* global Office, PowerPoint, Rules */
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 let BRAND = null;
 const TEXT_TYPES = ['GeometricShape', 'TextBox', 'Placeholder', 'Callout'];
+const NOT_IN_POWERPOINT = 'This page is the add-in. It only works inside PowerPoint: Home → Add-ins → My Add-ins → Upload My Add-in → manifest.xml.';
 
-Office.onReady(async info => {
-  document.getElementById('ver').textContent = 'Version ' + VERSION;
-  if (info.host !== Office.HostType.PowerPoint) return log('Open this add-in in PowerPoint.');
+document.getElementById('ver').textContent = 'Version ' + VERSION;
+if (typeof Office === 'undefined') {
+  log('Could not load Microsoft\'s Office library (appsforoffice.microsoft.com). Check your internet connection, or ask IT whether that address is blocked.');
+} else {
+  // Outside PowerPoint, Office.onReady may never answer: say so instead of sitting on "Ready."
+  const notReady = setTimeout(() => log(NOT_IN_POWERPOINT), 5000);
+  Office.onReady(info => { clearTimeout(notReady); return start(info); });
+}
+
+async function start(info) {
+  if (info.host !== Office.HostType.PowerPoint) return log(NOT_IN_POWERPOINT);
   try {
     BRAND = await (await fetch('brand.json', { cache: 'no-store' })).json();
   } catch (e) {
@@ -25,7 +34,8 @@ Office.onReady(async info => {
   on('btnEmpty', findEmpty);
   on('btnTerms', findTerms);
   on('btnCheck', brandCheck);
-});
+  log('Ready. Connected to PowerPoint.');
+}
 
 function supports(v) { return Office.context.requirements.isSetSupported('PowerPointApi', v); }
 function on(id, fn) {
