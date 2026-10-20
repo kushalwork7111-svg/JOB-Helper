@@ -22,14 +22,16 @@ const SETTINGS_ = [
 ];
 
 /** Settings for the dashboard form, with current values from the Config tab. */
-function getSettings() {
+function getSettings(token) {
+  auth_(token);
   const c = cfg_(), defaults = {};
   CONFIG_DEFAULTS.forEach(r => { defaults[r[0]] = r[1]; });
   return SETTINGS_.map(s => Object.assign({}, s, { value: c[s.key] != null ? c[s.key] : (defaults[s.key] || '') }));
 }
 
 /** Checks and saves edited settings. Saves nothing if any value is wrong. */
-function saveSettings(changes) {
+function saveSettings(token, changes) {
+  auth_(token);
   const byKey = {}, errors = [], clean = {};
   SETTINGS_.forEach(s => { byKey[s.key] = s; });
   Object.keys(changes || {}).forEach(k => {
@@ -66,7 +68,8 @@ function saveSettings(changes) {
 }
 
 /** Sends one sample alert to the alert address, so the owner can see it arrives. Only runs when the owner clicks the button. */
-function sendTestAlert() {
+function sendTestAlert(token) {
+  auth_(token);
   const c = cfg_();
   if (!c['Email To']) throw new Error('Set "Send job alerts to" first');
   MailApp.sendEmail({ to: c['Email To'], subject: 'Job Finder: test alert',

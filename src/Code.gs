@@ -1,4 +1,4 @@
-const APP_VERSION = '0.3';
+const APP_VERSION = '0.4';
 const SHEET_TITLE = 'Job Finder Data';
 const TRIGGER_SUBJECT = 'Job Finder: tailoring requested';
 const TABS = {
@@ -30,6 +30,7 @@ const CONFIG_DEFAULTS = [
 
 /* ---------- setup (run once from the editor) ---------- */
 function setup() {
+  if (!isOwnerSignedIn_()) throw new Error('setup can only be run by the owner from the Apps Script editor');
   const props = PropertiesService.getScriptProperties();
   let ss = props.getProperty('SHEET_ID') ? SpreadsheetApp.openById(props.getProperty('SHEET_ID')) : null;
   if (!ss) { ss = SpreadsheetApp.create(SHEET_TITLE); props.setProperty('SHEET_ID', ss.getId()); }
@@ -138,18 +139,20 @@ function missingRunCheck_(c) {
   MailApp.sendEmail(c['Email To'], 'Job Finder: today\'s search has not arrived', 'No search results were saved today. Open the Gemini app → Tasks and check the daily search task ran and did not stop to ask a question.');
 }
 
-/* ---------- web page (only you can open it) ---------- */
+/* ---------- web page (public link, locked by a PIN: see Access.gs) ---------- */
 function doGet() { const t = HtmlService.createTemplateFromFile('Index'); t.version = APP_VERSION; return t.evaluate().setTitle('Job Finder').addMetaTag('viewport', 'width=device-width, initial-scale=1'); }
-function getJobs() {
+function getJobs(token) {
+  auth_(token);
   return rows_('Jobs').map(j => ({ id: j['Job ID'], title: j.Title, company: j.Company, location: j.Location, mode: j['Work Mode'],
     exp: j['Experience Asked'], salary: j.Salary, url: j['Apply URL'], email: j['Apply Email'], score: num_(j['Fit Score']),
     breakdown: j['Score Breakdown'], status: j.Status || 'New', posted: String(j['Posted On']).slice(0, 15) }))
     .sort((a, b) => b.score - a.score);
 }
-function setStatus(jobId, status) { const j = rows_('Jobs').find(r => r['Job ID'] === jobId); if (j) setCell_('Jobs', j._row, 'Status', status); return true; }
+function setStatus(token, jobId, status) { auth_(token); const j = rows_('Jobs').find(r => r['Job ID'] === jobId); if (j) setCell_('Jobs', j._row, 'Status', status); return true; }
 
 /* ---------- tailoring ---------- */
-function requestTailor(jobId, instructions) {
+function requestTailor(token, jobId, instructions) {
+  auth_(token);
   const id = 'TR-' + Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyyMMdd-HHmmss');
   append_('Tailor Requests', { 'Request ID': id, 'Requested At': new Date(), 'Job ID': jobId, 'Status': 'QUEUED', 'Instructions': instructions || '' });
   const me = Session.getEffectiveUser().getEmail();
@@ -221,7 +224,8 @@ function buildCvDoc_(res, job, c) {
 }
 
 /* ---------- apply ---------- */
-function applyJob(jobId, confirmed) {
+function applyJob(token, jobId, confirmed) {
+  auth_(token);
   const job = rows_('Jobs').find(j => j['Job ID'] === jobId); if (!job) throw new Error('Job not found');
   const tr = rows_('Tailor Requests').filter(r => r['Job ID'] === jobId && r['Doc URL']).pop();
   if (!job['Apply Email']) return { open: job['Apply URL'], note: 'Portal application: the page opens; attach your tailored CV there.' };

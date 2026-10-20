@@ -164,7 +164,7 @@ const tests = {
 
   'Tailor my CV queues a request and sends the trigger email to the owner only'(env = seeded()) {
     const id = job(env);
-    const req = env.app.requestTailor(id, 'Stress valuation');
+    const req = env.app.requestTailor(env.unlock(), id, 'Stress valuation');
     const row = env.app.rows_('Tailor Requests')[0];
     assert.strictEqual(row['Request ID'], req);
     assert.strictEqual(row.Status, 'QUEUED');
@@ -209,20 +209,20 @@ const tests = {
   },
 
   'Apply on a portal job opens the posting and sends nothing'(env = seeded()) {
-    const r = env.app.applyJob(job(env), true);
+    const r = env.app.applyJob(env.unlock(), job(env), true);
     assert.ok(r.open);
     assert.strictEqual(env.state.emails.length, 0);
   },
 
   'Apply by email needs a tailored CV, then asks to confirm, then sends'(env = seeded()) {
     const id = job(env, { 'Apply Email': 'hiring@example.com' });
-    assert.deepStrictEqual(Object.keys(env.app.applyJob(id, false)), ['needTailor']);
+    assert.deepStrictEqual(Object.keys(env.app.applyJob(env.unlock(), id, false)), ['needTailor']);
     env.app.append_('Tailor Requests', { 'Request ID': 'TR-1', 'Job ID': id, 'Status': 'DONE', 'Result JSON': JSON.stringify(GOOD_RESULT) });
     env.app.pollTick();
     const before = env.state.emails.length;
-    assert.ok(env.app.applyJob(id, false).confirm, 'asks first');
+    assert.ok(env.app.applyJob(env.unlock(), id, false).confirm, 'asks first');
     assert.strictEqual(env.state.emails.length, before, 'nothing sent without confirmation');
-    assert.strictEqual(env.app.applyJob(id, true).sent, true);
+    assert.strictEqual(env.app.applyJob(env.unlock(), id, true).sent, true);
     const mail = env.state.emails[env.state.emails.length - 1];
     assert.strictEqual(mail.to, 'hiring@example.com');
     assert.strictEqual(mail.attachments.length, 1);
@@ -241,12 +241,12 @@ const tests = {
   'dashboard data lists jobs best first'(env = seeded()) {
     job(env, { 'Location': 'Delhi' }); job(env);
     env.app.pollTick();
-    const list = env.app.getJobs();
+    const list = env.app.getJobs(env.unlock());
     assert.ok(list[0].score >= list[1].score);
   },
 
   'settings form lists every editable setting with its current value'(env = seeded()) {
-    const list = env.app.getSettings();
+    const list = env.app.getSettings(env.unlock());
     const email = list.find(s => s.key === 'Email To');
     assert.strictEqual(email.value, 'owner@example.com');
     assert.ok(!list.some(s => s.key === 'Master CV Doc ID'), 'CV link is set by uploading, not typed');
@@ -254,11 +254,11 @@ const tests = {
   },
 
   'saving settings validates and writes only changed values'(env = seeded()) {
-    const bad = env.app.saveSettings({ 'Email To': 'not-an-email', 'Min Fit Score': '150', 'Alert Time If No Run': '9am', 'Weight Skills': '50' });
+    const bad = env.app.saveSettings(env.unlock(), { 'Email To': 'not-an-email', 'Min Fit Score': '150', 'Alert Time If No Run': '9am', 'Weight Skills': '50' });
     assert.strictEqual(bad.ok, false);
     assert.strictEqual(bad.errors.length, 4, bad.errors.join(' | '));
     assert.strictEqual(env.app.cfg_()['Email To'], 'owner@example.com', 'nothing saved when anything is wrong');
-    const good = env.app.saveSettings({ 'Email To': 'a@example.com; b@example.com', 'Min Fit Score': '70', 'Locations': 'Pune ;Mumbai',
+    const good = env.app.saveSettings(env.unlock(), { 'Email To': 'a@example.com; b@example.com', 'Min Fit Score': '70', 'Locations': 'Pune ;Mumbai',
       'Research Paused': 'yes', 'Experience Years': '8' });
     assert.strictEqual(good.ok, true, (good.errors || []).join(' | '));
     assert.strictEqual(good.saved.join(','), 'Email To,Min Fit Score,Locations,Research Paused');
@@ -269,7 +269,7 @@ const tests = {
   },
 
   'settings cannot change the CV link or unknown keys'(env = seeded()) {
-    const r = env.app.saveSettings({ 'Master CV Doc ID': 'x', 'Something': 'y' });
+    const r = env.app.saveSettings(env.unlock(), { 'Master CV Doc ID': 'x', 'Something': 'y' });
     assert.strictEqual(r.ok, false);
     assert.strictEqual(r.errors.length, 2);
   },
@@ -283,9 +283,65 @@ const tests = {
   },
 
   'test alert goes only to the alert address'(env = seeded()) {
-    assert.strictEqual(env.app.sendTestAlert(), 'owner@example.com');
+    assert.strictEqual(env.app.sendTestAlert(env.unlock()), 'owner@example.com');
     assert.strictEqual(env.state.emails.length, 1);
     assert.strictEqual(env.state.emails[0].to, 'owner@example.com');
+  },
+
+  'without the PIN, page actions are refused and nothing is sent'(env = seeded()) {
+    const id = job(env, { 'Apply Email': 'hiring@example.com' });
+    env.unlock();
+    ['getJobs', 'getSettings', 'sendTestAlert'].forEach(f => assert.throws(() => env.app[f](''), /NEEDS_PIN/, f));
+    assert.throws(() => env.app.applyJob('made-up-token', id, true), /NEEDS_PIN/);
+    assert.throws(() => env.app.previewCv(undefined, 'some-doc'), /NEEDS_PIN/);
+    assert.throws(() => env.app.saveSettings('', { 'Email To': 'thief@example.com' }), /NEEDS_PIN/);
+    assert.strictEqual(env.state.emails.length, 0);
+    assert.strictEqual(env.app.cfg_()['Email To'], 'owner@example.com');
+  },
+
+  'the PIN is stored only as a salted one-way hash'(env = seeded()) {
+    env.unlock('739154');
+    const all = JSON.stringify(env.state.props);
+    assert.ok(all.indexOf('739154') < 0, 'PIN not stored as typed');
+    assert.ok(/^[0-9a-f]{64}$/.test(env.state.props.PIN_HASH));
+  },
+
+  'five wrong PINs lock the page, email the owner once, and repeat lockouts last longer'(env = seeded()) {
+    env.unlock('739154');
+    for (let i = 0; i < 4; i++) assert.ok(/tries left/.test(env.app.unlock('000000').message));
+    assert.ok(/locked for 15 minutes/.test(env.app.unlock('000000').message));
+    assert.strictEqual(env.app.unlock('739154').ok, false, 'even the right PIN waits out the lock');
+    assert.strictEqual(env.state.emails.filter(e => /page locked/.test(e.subject)).length, 1);
+    env.setNow('2026-10-19T03:46:00Z');
+    for (let i = 0; i < 5; i++) env.app.unlock('111111');
+    assert.strictEqual(env.app.pinStatus().lockedMinutes, 30);
+    env.setNow('2026-10-19T04:17:00Z');
+    assert.strictEqual(env.app.unlock('739154').ok, true, 'right PIN works once the lock ends');
+  },
+
+  'an unlock lasts 6 hours'(env = seeded()) {
+    const t = env.unlock();
+    assert.ok(env.app.getJobs(t));
+    env.setNow('2026-10-19T09:31:00Z');
+    assert.throws(() => env.app.getJobs(t), /NEEDS_PIN/);
+  },
+
+  'only the signed-in owner can create the first PIN or run setup'(env = seeded()) {
+    env.state.activeUser = '';
+    assert.strictEqual(env.app.pinStatus().canCreate, false);
+    assert.throws(() => env.app.createPin('123456'), /Only the owner/);
+    assert.throws(() => env.app.setup(), /only be run by the owner/);
+    env.state.activeUser = env.state.me;
+    assert.strictEqual(env.app.createPin('123456').ok, true);
+    assert.throws(() => env.app.createPin('654321'), /already exists/, 'cannot be replaced without the old PIN');
+  },
+
+  'changing the PIN needs the current PIN'(env = seeded()) {
+    const t = env.unlock('739154');
+    assert.throws(() => env.app.changePin(t, '000000', '258025'), /Current PIN is wrong/);
+    assert.strictEqual(env.app.changePin(t, '739154', '258025'), true);
+    assert.strictEqual(env.app.unlock('739154').ok, false);
+    assert.strictEqual(env.app.unlock('258025').ok, true);
   },
 
   'CV reader extracts every expected fact from 18 CV layouts'() {
@@ -297,7 +353,7 @@ const tests = {
   'uploading a CV shows a preview and changes nothing until confirmed'(env = createEnv()) {
     env.app.setup();
     const cv = accuracy.SETS.tuning[0].text;
-    const res = env.app.importCv('Rahul CV.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', Buffer.from(cv).toString('base64'));
+    const res = env.app.importCv(env.unlock(), 'Rahul CV.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', Buffer.from(cv).toString('base64'));
     assert.strictEqual(res.cv.name, 'Rahul Mehta');
     assert.ok(res.plan.find(x => x.field === 'Experience Years' && x.proposed === '12.3' && x.change));
     assert.strictEqual(env.app.cfg_()['Master CV Doc ID'], '', 'nothing saved yet');
@@ -309,8 +365,8 @@ const tests = {
   'confirming a CV fills Profile and Config, keeping choices already made'(env = createEnv()) {
     env.app.setup();
     env.setConfig({ 'Locations': 'Bengaluru; Remote' });
-    const res = env.app.importCv('cv.txt', 'text/plain', Buffer.from(accuracy.SETS.tuning[0].text).toString('base64'));
-    const out = env.app.applyCv(res.docId);
+    const res = env.app.importCv(env.unlock(), 'cv.txt', 'text/plain', Buffer.from(accuracy.SETS.tuning[0].text).toString('base64'));
+    const out = env.app.applyCv(env.unlock(), res.docId);
     const c = env.app.cfg_(), p = env.app.profile_();
     assert.strictEqual(c['Master CV Doc ID'], res.docId);
     assert.strictEqual(c['Experience Years'], '12.3');
@@ -324,7 +380,7 @@ const tests = {
 
   'scoring uses skills read from an uploaded CV'(env = createEnv()) {
     env.app.setup();
-    env.app.applyCv(env.app.importCv('cv.txt', 'text/plain', Buffer.from(accuracy.SETS.tuning[0].text).toString('base64')).docId);
+    env.app.applyCv(env.unlock(), env.app.importCv(env.unlock(), 'cv.txt', 'text/plain', Buffer.from(accuracy.SETS.tuning[0].text).toString('base64')).docId);
     const s = env.app.scoreJob_({ 'Title': 'Manager - Transaction Advisory', 'Location': 'Mumbai', 'Experience Asked': '10-14 years',
       'Posted On': '2026-10-18', 'Must Have': 'Financial due diligence; Valuation', 'Nice To Have': 'Capital IQ' }, env.app.profile_(), env.app.cfg_());
     assert.strictEqual(s.score, 100, s.breakdown);

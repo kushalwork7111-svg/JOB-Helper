@@ -80,7 +80,8 @@ function blob(name, contentType, bytes) {
 function createEnv(opts) {
   opts = opts || {};
   const state = { now: opts.now || Date.parse('2026-10-19T03:30:00Z'), emails: [], triggers: [], logs: [],
-    spreadsheets: {}, docs: {}, folders: {}, props: {}, fetches: [], ids: 0, me: 'owner@example.com' };
+    spreadsheets: {}, docs: {}, folders: {}, props: {}, cache: {}, activeUser: 'owner@example.com', fetches: [], ids: 0, me: 'owner@example.com' };
+  state.activeUser = state.me;
   const newId = p => p + (++state.ids);
 
   // Date that follows the test clock when no arguments are given.
@@ -132,6 +133,7 @@ function createEnv(opts) {
   const store = {
     getProperty: k => (k in state.props ? state.props[k] : null),
     setProperty(k, v) { state.props[k] = String(v); return store; },
+    setProperties(o) { Object.keys(o).forEach(k => { state.props[k] = String(o[k]); }); return store; },
     deleteProperty(k) { delete state.props[k]; return store; },
     getProperties: () => Object.assign({}, state.props)
   };
@@ -168,9 +170,18 @@ function createEnv(opts) {
     Utilities: {
       formatDate,
       base64Decode: b64 => Array.from(Buffer.from(b64, 'base64')),
-      newBlob: (bytes, type, name) => blob(name, type, bytes)
+      newBlob: (bytes, type, name) => blob(name, type, bytes),
+      getUuid: () => require('crypto').randomUUID(),
+      DigestAlgorithm: { SHA_256: 'sha256' },
+      // Apps Script returns signed bytes (-128..127)
+      computeDigest: (alg, text) => Array.from(require('crypto').createHash(alg).update(text, 'utf8').digest()).map(b => (b > 127 ? b - 256 : b))
     },
-    Session: { getEffectiveUser: () => ({ getEmail: () => state.me }) },
+    CacheService: { getScriptCache: () => ({
+      get: k => { const e = state.cache[k]; return e && e.until > state.now ? e.v : null; },
+      put: (k, v, secs) => { state.cache[k] = { v, until: state.now + secs * 1000 }; }
+    }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    Session: { getEffectiveUser: () => ({ getEmail: () => state.me }), getActiveUser: () => ({ getEmail: () => state.activeUser }) },
     Logger: { log: m => state.logs.push(String(m)) },
     HtmlService: {
       createTemplateFromFile: name => ({ evaluate() { return { name, setTitle() { return this; }, addMetaTag() { return this; } }; } })
@@ -195,6 +206,8 @@ function createEnv(opts) {
         ctx.setCell_('Config', r._row, 'Value', values[k]);
       });
     },
+    /** Sets a PIN and unlocks, as the owner would on the page. Returns the session token. */
+    unlock(pin) { pin = pin || '246810'; if (!state.props.PIN_HASH) ctx.setPin_(pin); return ctx.unlock(pin).token; },
     setProfile(values) { Object.keys(values).forEach(k => ctx.append_('Profile', { Field: k, Value: values[k] })); }
   };
 }

@@ -14,16 +14,27 @@
  .set input,.set select{width:100%;box-sizing:border-box} .set h4{grid-column:1/-1;margin:10px 0 0} .err{color:#B91C1C;font-size:13px}
  @media (max-width:560px){.set{grid-template-columns:1fr}}
  .warn{background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px;font-size:13px}
+ #gate{max-width:360px;margin:40px auto;text-align:center} #gate input{font-size:22px;letter-spacing:6px;text-align:center;width:100%;box-sizing:border-box;margin:12px 0}
+ .hidden{display:none!important}
  button{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer} button.primary{background:var(--accent);color:#fff;border:0}
 </style></head><body>
 <header>Job Finder <span class="muted" style="color:#94A3B8">v<?= version ?></span></header>
-<main>
+<section id="gate" class="card">
+ <b id="gateTitle">Enter your PIN</b>
+ <div class="muted" id="gateHelp"></div>
+ <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" onkeydown="if(event.key==='Enter')gateGo()">
+ <button class="primary" onclick="gateGo()" id="gateBtn">Unlock</button>
+ <div id="gateMsg" class="err"></div>
+</section>
+<main id="app" class="hidden">
  <details class="card" style="margin-bottom:12px" id="settingsBox" ontoggle="if(this.open&&!SETTINGS.length)loadSettings()">
   <summary>Settings</summary>
   <div class="muted">Where alerts go, what to look for and how jobs are scored. Changes apply from the next check (within 5 minutes).</div>
   <div class="set" id="setForm">Loading…</div>
   <div class="bar"><button class="primary" onclick="saveSet()">Save settings</button><button onclick="testMail()">Send me a test alert</button></div>
   <div id="setMsg"></div>
+  <h4>Change PIN</h4>
+  <div class="bar"><input id="oldPin" type="password" inputmode="numeric" placeholder="Current PIN"><input id="newPin" type="password" inputmode="numeric" placeholder="New PIN (4–12 digits)"><button onclick="changePinNow()">Change PIN</button><button onclick="lockNow()">Lock this page</button></div>
  </details>
  <section class="card" style="margin-bottom:12px">
   <b>My CV</b>
@@ -35,28 +46,48 @@
  <div class="grid" id="grid">Loading…</div>
 </main>
 <script>
-let JOBS=[];
+let JOBS=[],TOKEN='',GATE={};
+try{TOKEN=sessionStorage.getItem('jf')||''}catch(e){}
+/** Calls the server with the unlock token; a missing/expired unlock shows the PIN screen again. */
+function api(fn,args,ok,fail){google.script.run.withSuccessHandler(ok||(()=>{})).withFailureHandler(e=>{
+  if(/NEEDS_PIN/.test(e.message)){TOKEN='';try{sessionStorage.removeItem('jf')}catch(x){}showGate()}else(fail||(x=>alert(x.message)))(e)})[fn](TOKEN,...args)}
+function showGate(){document.getElementById('app').classList.add('hidden');document.getElementById('gate').classList.remove('hidden');
+ google.script.run.withSuccessHandler(st=>{GATE=st;const t=document.getElementById('gateTitle'),h=document.getElementById('gateHelp'),b=document.getElementById('gateBtn');
+  if(st.canCreate){t.textContent='Create your PIN';h.textContent='4 to 12 digits. Longer is safer; avoid numbers from your email or phone.';b.textContent='Create PIN'}
+  else if(!st.hasPin){t.textContent='Not set up yet';h.textContent='The owner has not created a PIN yet.';b.disabled=true}
+  else{t.textContent='Enter your PIN';h.textContent=st.lockedMinutes?'Locked for '+st.lockedMinutes+' more minutes after wrong PINs.':''}}).pinStatus()}
+function gateGo(){const pin=document.getElementById('pin').value,m=document.getElementById('gateMsg');m.textContent='';
+ const done=r=>{if(r.ok){TOKEN=r.token;try{sessionStorage.setItem('jf',TOKEN)}catch(e){}document.getElementById('pin').value='';openApp()}else m.textContent=r.message};
+ const err=e=>m.textContent=e.message;
+ if(GATE.canCreate){if(!/^\d{4,12}$/.test(pin)){m.textContent='Use 4 to 12 digits.';return}if(prompt('Type the same PIN again to confirm')!==pin){m.textContent='The two PINs did not match.';return}
+  google.script.run.withSuccessHandler(done).withFailureHandler(err).createPin(pin)}
+ else google.script.run.withSuccessHandler(done).withFailureHandler(err).unlock(pin)}
+function openApp(){document.getElementById('gate').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load()}
+function lockNow(){TOKEN='';try{sessionStorage.removeItem('jf')}catch(e){}showGate()}
+function changePinNow(){const o=document.getElementById('oldPin').value,n=document.getElementById('newPin').value;
+ if(!/^\d{4,12}$/.test(n)){alert('New PIN: use 4 to 12 digits.');return}
+ if(prompt('Type the new PIN again to confirm')!==n){alert('The two PINs did not match.');return}
+ api('changePin',[o,n],()=>{document.getElementById('oldPin').value=document.getElementById('newPin').value='';alert('PIN changed.')})}
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function load(){google.script.run.withSuccessHandler(j=>{JOBS=j;paint()}).getJobs()}
+function load(){api('getJobs',[],j=>{JOBS=j;paint()})}
 function paint(){const q=document.getElementById('q').value.toLowerCase(),st=document.getElementById('st').value;
  document.getElementById('grid').innerHTML=JOBS.filter(j=>(!q||(j.title+' '+j.company).toLowerCase().includes(q))&&(!st||j.status===st)).map(j=>
  '<div class="card"><div class="score">Fit '+j.score+'</div><b>'+esc(j.title)+'</b><div>'+esc(j.company)+' · '+esc(j.location)+'</div>'+
  '<div class="muted">'+esc(j.breakdown)+'</div><div class="muted">'+esc(j.exp)+' · '+esc(j.salary||'Salary not stated')+' · '+esc(j.status)+'</div>'+
- '<div class="bar"><button onclick="tailor(\''+j.id+'\')">Tailor my CV</button><button class="primary" onclick="apply(\''+j.id+'\')">Apply</button>'+
+ '<div class="bar"><button data-id="'+esc(j.id)+'" onclick="tailor(this.dataset.id)">Tailor my CV</button><button class="primary" data-id="'+esc(j.id)+'" onclick="apply(this.dataset.id)">Apply</button>'+
  (j.url?'<a href="'+esc(j.url)+'" target="_blank" rel="noopener">Posting</a>':'')+'</div></div>').join('')||'No jobs yet.'}
-function tailor(id){const note=prompt('Anything to stress for this job? (optional)')||'';google.script.run.withSuccessHandler(()=>alert('Requested. The tailored CV arrives by email within a few minutes.')).requestTailor(id,note)}
-function apply(id,ok){google.script.run.withSuccessHandler(r=>{
+function tailor(id){const note=prompt('Anything to stress for this job? (optional)')||'';api('requestTailor',[id,note],()=>alert('Requested. The tailored CV arrives by email within a few minutes.'))}
+function apply(id,ok){api('applyJob',[id,!!ok],r=>{
  if(r.open){window.open(r.open,'_blank');alert(r.note)}else if(r.needTailor){alert('Tailor your CV for this job first.')}
- else if(r.confirm){if(confirm(r.confirm))apply(id,true)}else if(r.sent){alert('Application sent.');load()}}).applyJob(id,!!ok)}
+ else if(r.confirm){if(confirm(r.confirm))apply(id,true)}else if(r.sent){alert('Application sent.');load()}})}
 const MIME={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',pdf:'application/pdf',txt:'text/plain',rtf:'application/rtf',odt:'application/vnd.oasis.opendocument.text'};
 let CVDOC='';
 function uploadCv(){const f=document.getElementById('cvfile').files[0],out=document.getElementById('cvout');
  if(!f){alert('Choose your CV file first.');return}
  if(f.size>10*1024*1024){alert('That file is over 10 MB.');return}
  out.textContent='Reading your CV…';
- const r=new FileReader();r.onload=()=>google.script.run.withSuccessHandler(showCv)
-  .withFailureHandler(e=>out.textContent='Could not read the CV: '+e.message)
-  .importCv(f.name,MIME[f.name.split('.').pop().toLowerCase()]||f.type,String(r.result).split(',')[1]);
+ const r=new FileReader();r.onload=()=>api('importCv',[f.name,MIME[f.name.split('.').pop().toLowerCase()]||f.type,String(r.result).split(',')[1]],
+  showCv,e=>out.textContent='Could not read the CV: '+e.message);
  r.readAsDataURL(f)}
 function showCv(res){CVDOC=res.docId;const cv=res.cv;
  const jobs=cv.experience.map(e=>'<li>'+esc(e.role||'(title not found)')+' · '+esc(e.company||'(company not found)')+' <span class="muted">'+esc(e.start)+' – '+esc(e.end)+'</span></li>').join('');
@@ -66,20 +97,20 @@ function showCv(res){CVDOC=res.docId;const cv=res.cv;
   '<table class="plan"><tr><th>Setting</th><th>Now</th><th>After</th></tr>'+rows+'</table>'+
   '<div class="bar"><button class="primary" onclick="useCv()">Use this CV</button><button onclick="document.getElementById(\'cvout\').innerHTML=\'\'">Cancel</button></div>'}
 function useCv(){if(!confirm('Save these details to your Job Finder settings?'))return;
- google.script.run.withSuccessHandler(r=>{document.getElementById('cvout').innerHTML='Saved. '+r.changed.length+' settings updated. You can edit any of them in the Profile and Config tabs.'}).applyCv(CVDOC)}
+ api('applyCv',[CVDOC],r=>{document.getElementById('cvout').innerHTML='Saved. '+r.changed.length+' settings updated. You can edit any of them in Settings or the Profile tab.'})}
 let SETTINGS=[];
-function loadSettings(){google.script.run.withSuccessHandler(list=>{SETTINGS=list;let g='';
+function loadSettings(){api('getSettings',[],list=>{SETTINGS=list;let g='';
  document.getElementById('setForm').innerHTML=list.map((s,i)=>{const head=s.group!==g?'<h4>'+esc(g=s.group)+'</h4>':'';
   const input=s.type==='yesno'?'<select id="set'+i+'"><option'+(s.value==='NO'?' selected':'')+' value="NO">No</option><option'+(s.value==='YES'?' selected':'')+' value="YES">Yes</option></select>'
    :'<input id="set'+i+'" value="'+esc(s.value)+'" '+(s.type==='number'?'inputmode="decimal"':s.type==='emails'?'type="email" multiple':'')+(s.help?' placeholder="'+esc(s.help)+'"':'')+'>';
-  return head+'<label for="set'+i+'">'+esc(s.label)+'</label>'+input}).join('')}).getSettings()}
+  return head+'<label for="set'+i+'">'+esc(s.label)+'</label>'+input}).join('')})}
 function saveSet(){const ch={};SETTINGS.forEach((s,i)=>{const v=document.getElementById('set'+i).value;if(v!==String(s.value))ch[s.key]=v});
  const msg=document.getElementById('setMsg');if(!Object.keys(ch).length){msg.textContent='Nothing changed.';return}
  if(!confirm('Save '+Object.keys(ch).length+' changed setting(s)?'))return;
- google.script.run.withSuccessHandler(r=>{if(r.ok){msg.innerHTML='Saved: '+r.saved.map(esc).join(', ');SETTINGS=[];loadSettings()}
-  else msg.innerHTML='<div class="err">Not saved:<br>'+r.errors.map(esc).join('<br>')+'</div>'}).saveSettings(ch)}
+ api('saveSettings',[ch],r=>{if(r.ok){msg.innerHTML='Saved: '+r.saved.map(esc).join(', ');SETTINGS=[];loadSettings()}
+  else msg.innerHTML='<div class="err">Not saved:<br>'+r.errors.map(esc).join('<br>')+'</div>'})}
 function testMail(){if(!confirm('Send one test email to your alert address?'))return;
- google.script.run.withSuccessHandler(to=>document.getElementById('setMsg').textContent='Test email sent to '+to+'.')
-  .withFailureHandler(e=>document.getElementById('setMsg').innerHTML='<div class="err">'+esc(e.message)+'</div>').sendTestAlert()}
-load();
+ api('sendTestAlert',[],to=>document.getElementById('setMsg').textContent='Test email sent to '+to+'.',
+  e=>document.getElementById('setMsg').innerHTML='<div class="err">'+esc(e.message)+'</div>')}
+if(TOKEN)openApp();else showGate();
 </script></body></html>

@@ -449,15 +449,17 @@ function folder_() {
 }
 
 /** Called from the dashboard with the uploaded file. Converts it to a Google Doc and returns a preview; changes nothing yet. */
-function importCv(fileName, mimeType, base64) {
+function importCv(token, fileName, mimeType, base64) {
+  auth_(token);
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, fileName);
   const file = Drive.Files.create({ name: 'Master CV - ' + String(fileName).replace(/\.[^.]+$/, ''), mimeType: MimeType.GOOGLE_DOCS,
     parents: [folder_().getId()] }, blob);
-  return previewCv(file.id);
+  return previewCv_(file.id);
 }
 
 /** Preview for a CV that is already a Google Doc (id or link). */
-function previewCv(docRef) {
+function previewCv(token, docRef) { auth_(token); return previewCv_(docRef); }
+function previewCv_(docRef) {
   const docId = (String(docRef).match(/[-\w]{25,}/) || [docRef])[0];
   const cv = parseCv_(DocumentApp.openById(docId).getBody().getText());
   return { docId, cv, plan: cvPlan_(cv, docId) };
@@ -491,8 +493,9 @@ function cvPlan_(cv, docId) {
 }
 
 /** Applies the preview after the owner clicks "Use this CV". Re-reads the document so only real CV facts are saved. */
-function applyCv(docId) {
-  const res = previewCv(docId);
+function applyCv(token, docId) {
+  auth_(token);
+  const res = previewCv_(docId);
   res.plan.filter(x => x.change).forEach(x => (x.tab === 'Profile' ? setProfile_ : setConfig_)(x.field, x.proposed));
   setProfile_('CV Data', JSON.stringify(res.cv));
   return { changed: res.plan.filter(x => x.change).map(x => x.field), warnings: res.cv.warnings };
